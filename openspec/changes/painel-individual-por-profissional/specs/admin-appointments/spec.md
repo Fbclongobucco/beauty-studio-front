@@ -29,7 +29,7 @@ O admin SHALL mostrar a contagem de pedidos "Aguardando confirmação" em destaq
 ### Requirement: Agenda por dia e profissional
 O admin SHALL ter uma visão de agenda por dia, com os agendamentos em ordem de horário, mostrando cliente, telefone (com link para WhatsApp), serviço, duração e status. O admin SHALL ter uma lista de pedidos pendentes ordenada pela data do atendimento. O filtro por profissional SHALL aparecer só para o master. A profissional SHALL ver sempre e somente a própria agenda.
 
-#### Scenario: Agenda filtrada pelo master
+#### Scenario: Agenda filtrada
 - **WHEN** o master seleciona o dia 06/11 e o filtro "Lorrayne Longobuco"
 - **THEN** só os agendamentos da Lorrayne nesse dia aparecem, em ordem de horário
 
