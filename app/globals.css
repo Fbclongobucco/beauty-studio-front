@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #fbf1e5;
+  --color-blush: #f6e3d7;
+  --color-blush-2: #f1d2c4;
+  --color-rose: #a96e58;
+  --color-cocoa: #885640;
+  --color-coffee: #502216;
+  --color-ink: #311c10;
+
+  --color-ok: #2f6b3a;
+  --color-ok-bg: #e3f0e2;
+  --color-warn: #7a4a00;
+  --color-warn-bg: #fbecc8;
+  --color-danger: #8e1c1c;
+  --color-danger-bg: #f8dcdc;
+
+  --font-sans: var(--font-lato), system-ui, sans-serif;
+  --font-brand: var(--font-cinzel), Georgia, serif;
+  --font-script: var(--font-great-vibes), cursive;
+}
+
+/* Base de 18 px para leitura confortável (clientes idosas). */
+html {
+  font-size: 112.5%;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  line-height: 1.55;
+  /* Com zoom alto, palavras longas quebram em vez de gerar rolagem horizontal. */
+  overflow-wrap: break-word;
+}
+
+/* Foco sempre visível. */
+:focus-visible {
+  outline: 3px solid var(--color-coffee);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* Linha ornamental fina com coração ao centro, como no flyer. */
+.ornament {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--color-rose);
+}
+.ornament::before,
+.ornament::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
