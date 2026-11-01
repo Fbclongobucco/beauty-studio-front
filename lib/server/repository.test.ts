@@ -79,6 +79,25 @@ describe("agendamentos", () => {
     expect(await repo.pendingCount()).toEqual({ pending: 1, unseen: 0 });
   });
 
+  it("contagem e vistos por profissional", async () => {
+    await repo.createAppointment({ serviceId: "manicure", date: FRI, time: "11:00", ...customer }, NOW);
+    await repo.createAppointment({ serviceId: "depilacao", date: FRI, time: "11:00", ...customer }, NOW);
+    expect(await repo.pendingCount("stefani")).toEqual({ pending: 1, unseen: 1 });
+    expect(await repo.pendingCount()).toEqual({ pending: 2, unseen: 2 });
+    // Stéfani não marca como visto o pedido da Michele, mesmo informando todos os ids.
+    const ids = (await repo.listAppointments()).map((a) => a.id);
+    expect(await repo.markSeen(ids, "stefani")).toBe(1);
+    expect(await repo.pendingCount("michele")).toEqual({ pending: 1, unseen: 1 });
+  });
+
+  it("filtra por intervalo de datas inclusivo", async () => {
+    await repo.createAppointment({ serviceId: "manicure", date: "2026-11-02", time: "11:00", ...customer }, NOW);
+    await repo.createAppointment({ serviceId: "manicure", date: FRI, time: "11:00", ...customer }, NOW);
+    await repo.createAppointment({ serviceId: "manicure", date: "2026-11-09", time: "11:00", ...customer }, NOW);
+    const week = await repo.listAppointments({ from: "2026-11-02", to: "2026-11-07" });
+    expect(week.map((a) => a.date)).toEqual(["2026-11-02", FRI]);
+  });
+
   it("serviço inativo não aceita pedido", async () => {
     await repo.updateService("manicure", { active: false });
     const r = await repo.createAppointment({ serviceId: "manicure", date: FRI, time: "11:00", ...customer }, NOW);

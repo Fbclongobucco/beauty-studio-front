@@ -1,16 +1,19 @@
 import type { NextRequest } from "next/server";
 import type { StatusAction } from "@/lib/domain/types";
-import { requireAdmin } from "@/lib/server/auth";
+import { canAccess, getSession } from "@/lib/server/auth";
 import { apiError, json, notFound, readJson } from "@/lib/server/http";
 import { repo } from "@/lib/server/repository";
 
 const ACTIONS: StatusAction[] = ["confirm", "reject", "cancel"];
 
 export async function POST(request: NextRequest, ctx: RouteContext<"/api/admin/appointments/[id]/[action]">) {
-  const denied = await requireAdmin(request);
+  const { session, denied } = await getSession(request);
   if (denied) return denied;
   const { id, action } = await ctx.params;
   if (!ACTIONS.includes(action as StatusAction)) return notFound("Ação desconhecida.");
+  // Pedido de outra profissional: 404, sem revelar que existe.
+  const current = await repo.getAppointment(id);
+  if (!current || !canAccess(session, current.professionalId)) return notFound("Agendamento não encontrado.");
 
   const body = (await readJson(request)) as { reason?: unknown } | null;
   const reason = typeof body?.reason === "string" && body.reason.trim() ? body.reason.trim() : undefined;

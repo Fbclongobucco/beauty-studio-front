@@ -99,3 +99,9 @@ export function isoAt(date: string, minutes: number): string {
 export function overlaps(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
   return aStart < bEnd && bStart < aEnd;
 }
+
+/** Segunda-feira da semana da data (domingo pertence à semana iniciada na segunda anterior). */
+export function weekStart(date: string): string {
+  const wd = weekday(date);
+  return addDays(date, wd === 0 ? -6 : 1 - wd);
+}

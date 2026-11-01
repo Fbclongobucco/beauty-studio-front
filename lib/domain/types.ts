@@ -55,6 +55,27 @@ export interface Appointment {
   seenByAdminAt: string | null;
 }
 
+export type AdminRole = "master" | "professional";
+
+/** Conta logada no painel. Master: `professionalId` null e `name` vazio. */
+/** Login de uma profissional: definido no ambiente, criado no painel (memória) ou inexistente. */
+export interface AdminAccount {
+  professionalId: ID;
+  name: string;
+  login: "env" | "memory" | null;
+}
+
+export interface AdminAccountsResponse {
+  masterUsername: string;
+  accounts: AdminAccount[];
+}
+
+export interface AdminSession {
+  role: AdminRole;
+  professionalId: ID | null;
+  name: string;
+}
+
 export type ConflictKind = "confirmed" | "pending";
 
 export type StatusAction = "confirm" | "reject" | "cancel";
@@ -66,6 +87,7 @@ export type ApiErrorCode =
   | "INVALID_TRANSITION"
   | "NOT_FOUND"
   | "UNAUTHORIZED"
+  | "FORBIDDEN"
   | "LOGIN_DISABLED";
 
 export interface ApiError {
@@ -138,4 +160,30 @@ export interface PublicAppointment {
 
 export interface AdminAppointment extends Appointment {
   conflict: ConflictKind | null;
+}
+
+// ---- Ganhos (painel admin) ----
+
+export interface EarningsBucket {
+  /** Soma em centavos. */
+  cents: number;
+  /** Atendimentos somados. */
+  count: number;
+}
+
+export interface EarningsResponse {
+  from: string;
+  to: string;
+  total: EarningsBucket;
+  /** Atendimentos já terminados. */
+  realized: EarningsBucket;
+  /** Atendimentos que ainda não terminaram. */
+  expected: EarningsBucket;
+  /** Confirmados sem preço ("Consultar valor"), fora da soma. */
+  unpriced: number;
+  /** Ordenado do maior para o menor valor. */
+  byService: { name: string; count: number; cents: number }[];
+  /** Um item por dia útil do período (e por dia com atendimento). */
+  byDay: { date: string; realizedCents: number; expectedCents: number }[];
+  byProfessional: { professionalId: ID; name: string; count: number; cents: number }[];
 }

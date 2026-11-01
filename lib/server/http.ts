@@ -19,6 +19,8 @@ export const validationError = (fields: Record<string, string>) =>
 
 export const notFound = (message = "Não encontrado.") => apiError(404, "NOT_FOUND", message);
 
+export const forbidden = (message = "Você não tem permissão para esta ação.") => apiError(403, "FORBIDDEN", message);
+
 export async function readJson(request: Request): Promise<unknown> {
   try {
     return await request.json();

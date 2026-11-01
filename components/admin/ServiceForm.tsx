@@ -17,9 +17,11 @@ type Props = {
   services: Service[];
   onSaved: (s: Service) => void;
   onCancel: () => void;
+  /** Profissional: sem troca de responsável e sem criar categoria (o servidor também impede). */
+  isMaster?: boolean;
 };
 
-export function ServiceForm({ service, categories, professionals, services, onSaved, onCancel }: Props) {
+export function ServiceForm({ service, categories, professionals, services, onSaved, onCancel, isMaster = true }: Props) {
   const [name, setName] = useState(service?.name ?? "");
   const [categoryId, setCategoryId] = useState(service?.categoryId ?? categories[0]?.id ?? NEW);
   const [newCategory, setNewCategory] = useState("");
@@ -57,7 +59,8 @@ export function ServiceForm({ service, categories, professionals, services, onSa
         subcategory: subcategory.trim() || null,
         durationMin: duration,
         priceCents,
-        professionalId,
+        // Para a profissional, o servidor define a responsável (ela mesma).
+        ...(isMaster ? { professionalId } : {}),
         active,
       };
       let saved: Service;
@@ -88,7 +91,7 @@ export function ServiceForm({ service, categories, professionals, services, onSa
               {c.name}
             </option>
           ))}
-          <option value={NEW}>+ Nova categoria…</option>
+          {isMaster && <option value={NEW}>+ Nova categoria…</option>}
         </select>
       </Field>
       {categoryId === NEW && (
@@ -119,15 +122,17 @@ export function ServiceForm({ service, categories, professionals, services, onSa
           <PriceInput id={ids.price} value={price} onChange={(e) => setPrice(e.target.value)} aria-invalid={!!errors.priceCents || undefined} />
         </Field>
       </div>
-      <Field id={ids.prof} label="Profissional" error={errors.professionalId}>
-        <select id={ids.prof} value={professionalId} onChange={(e) => setProfessionalId(e.target.value)} className={inputClass}>
-          {professionals.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-      </Field>
+      {isMaster && (
+        <Field id={ids.prof} label="Profissional" error={errors.professionalId}>
+          <select id={ids.prof} value={professionalId} onChange={(e) => setProfessionalId(e.target.value)} className={inputClass}>
+            {professionals.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
       <label className="flex min-h-12 items-center gap-3 font-bold">
         <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} className="h-6 w-6 accent-cocoa" />
         Ativo (aparece para as clientes)

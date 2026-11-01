@@ -42,7 +42,15 @@ export default function Home() {
               className="h-auto w-full"
             />
           </div>
-          <p className="mt-5">Um espaço feito com carinho para cuidar de você.</p>
+          {/* Texto baseado no flyer e no post de reinauguração do salão; validar com as donas. */}
+          <p className="mt-5 font-script text-2xl leading-snug text-cocoa">
+            Um novo capítulo, um novo nome e o mesmo amor pela beleza.
+          </p>
+          <p className="mt-3">
+            O {SALON.name} está de cara nova. Unhas, tranças e depilação em um só lugar, em {SALON.district}, com horário
+            marcado para você ser atendida sem pressa.
+          </p>
+          <p className="mt-3 text-base">{SALON.hours}.</p>
           <ul className="mt-4 space-y-1 text-base">
             {SALON.team.map((p) => (
               <li key={p.name}>

@@ -1,11 +1,15 @@
 import type {
+  AdminAccount,
+  AdminAccountsResponse,
   AdminAppointment,
+  AdminSession,
   ApiError,
   Appointment,
   AvailabilityResponse,
   Category,
   CreateAppointmentInput,
   DaysResponse,
+  EarningsResponse,
   Professional,
   PublicAppointment,
   Service,
@@ -21,6 +25,7 @@ const FRIENDLY: Partial<Record<ApiError["code"], string>> = {
   SLOT_TAKEN: "Horário já ocupado por outro agendamento confirmado",
   INVALID_TRANSITION: "Essa ação não é possível no status atual.",
   UNAUTHORIZED: "Faça login para continuar.",
+  FORBIDDEN: "Você não tem permissão para esta ação.",
 };
 
 export class ApiRequestError extends Error {
@@ -76,9 +81,11 @@ export const api = {
   appointment: (id: string) => request<PublicAppointment>(`/api/appointments/${encodeURIComponent(id)}`),
 
   admin: {
-    login: (password: string) => request<{ ok: true }>("/api/admin/login", { method: "POST", json: { password } }),
+    login: (username: string, password: string) =>
+      request<{ ok: true }>("/api/admin/login", { method: "POST", json: { username, password } }),
     logout: () => request<{ ok: true }>("/api/admin/logout", { method: "POST" }),
-    appointments: (f: { status?: string; date?: string; professionalId?: string } = {}) =>
+    me: () => request<AdminSession>("/api/admin/me"),
+    appointments: (f: { status?: string; date?: string; from?: string; to?: string; professionalId?: string } = {}) =>
       request<{ appointments: AdminAppointment[] }>(`/api/admin/appointments?${qs(f)}`),
     pendingCount: () => request<{ pending: number; unseen: number }>("/api/admin/appointments/pending-count"),
     markSeen: (ids?: string[]) =>
@@ -90,7 +97,7 @@ export const api = {
       }),
     catalog: () =>
       request<{ services: Service[]; categories: Category[]; professionals: Professional[] }>("/api/admin/services"),
-    createService: (input: Omit<ServiceInput, "active"> & { active?: boolean }) =>
+    createService: (input: Omit<ServiceInput, "active" | "professionalId"> & { active?: boolean; professionalId?: string }) =>
       request<Service>("/api/admin/services", { method: "POST", json: input }),
     updateService: (id: string, patch: Partial<ServiceInput>) =>
       request<Service>(`/api/admin/services/${encodeURIComponent(id)}`, { method: "PATCH", json: patch }),
@@ -98,7 +105,12 @@ export const api = {
       request<Category>("/api/admin/categories", { method: "POST", json: { name, note } }),
     updateCategory: (id: string, patch: { name?: string; note?: string | null }) =>
       request<Category>(`/api/admin/categories/${encodeURIComponent(id)}`, { method: "PATCH", json: patch }),
+    earnings: (f: { from: string; to: string; professionalId?: string }) =>
+      request<EarningsResponse>(`/api/admin/earnings?${qs(f)}`),
     createProfessional: (name: string) =>
       request<Professional>("/api/admin/professionals", { method: "POST", json: { name } }),
+    accounts: () => request<AdminAccountsResponse>("/api/admin/accounts"),
+    setAccount: (professionalId: string, password: string) =>
+      request<AdminAccount>("/api/admin/accounts", { method: "POST", json: { professionalId, password } }),
   },
 };

@@ -17,6 +17,9 @@ import { getStore, type Store } from "./store";
 export interface AppointmentFilter {
   status?: AppointmentStatus;
   date?: string;
+  /** Intervalo de datas, inclusivo (YYYY-MM-DD). */
+  from?: string;
+  to?: string;
   professionalId?: string;
 }
 
@@ -47,8 +50,10 @@ export interface Repository {
   getAppointment(id: string): Promise<Appointment | null>;
   createAppointment(input: BookingValue, now?: Date): Promise<CreateResult>;
   transition(id: string, action: StatusAction, reason?: string): Promise<TransitionResult>;
-  pendingCount(): Promise<{ pending: number; unseen: number }>;
-  markSeen(ids?: string[]): Promise<number>;
+  /** Sem `professionalId`: salão todo. */
+  pendingCount(professionalId?: string): Promise<{ pending: number; unseen: number }>;
+  /** Marca pendentes como vistos; com `professionalId`, só os dessa profissional. */
+  markSeen(ids?: string[], professionalId?: string): Promise<number>;
 }
 
 const EVENT_BY_STATUS: Partial<Record<AppointmentStatus, DomainEventType>> = {
@@ -162,6 +167,8 @@ export function createMemoryRepository(store: () => Store = getStore): Repositor
           (a) =>
             (!filter.status || a.status === filter.status) &&
             (!filter.date || a.date === filter.date) &&
+            (!filter.from || a.date >= filter.from) &&
+            (!filter.to || a.date <= filter.to) &&
             (!filter.professionalId || a.professionalId === filter.professionalId),
         )
         .sort(byDateTime)
@@ -227,16 +234,19 @@ export function createMemoryRepository(store: () => Store = getStore): Repositor
       emit(EVENT_BY_STATUS[to]!, a);
       return { ok: true, appointment: structuredClone(a) };
     },
-    async pendingCount() {
-      const pending = store().appointments.filter((a) => a.status === "pending");
+    async pendingCount(professionalId) {
+      const pending = store().appointments.filter(
+        (a) => a.status === "pending" && (!professionalId || a.professionalId === professionalId),
+      );
       return { pending: pending.length, unseen: pending.filter((a) => !a.seenByAdminAt).length };
     },
-    async markSeen(ids) {
+    async markSeen(ids, professionalId) {
       const at = new Date().toISOString();
       let n = 0;
       for (const a of store().appointments) {
         if (a.status !== "pending" || a.seenByAdminAt) continue;
         if (ids && !ids.includes(a.id)) continue;
+        if (professionalId && a.professionalId !== professionalId) continue;
         a.seenByAdminAt = at;
         n++;
       }

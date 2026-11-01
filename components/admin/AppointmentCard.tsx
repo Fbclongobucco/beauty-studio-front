@@ -15,13 +15,15 @@ type Props = {
   a: AdminAppointment;
   isNew?: boolean;
   showDate?: boolean;
+  /** Mostra "com <profissional>" (só faz sentido para o master). */
+  showProfessional?: boolean;
   onAction: (a: AdminAppointment, action: StatusAction) => void;
 };
 
-export function AppointmentCard({ a, isNew, showDate = true, onAction }: Props) {
+export function AppointmentCard({ a, isNew, showDate = true, showProfessional = true, onAction }: Props) {
   const blocked = a.conflict === "confirmed";
   return (
-    <article className={`rounded-3xl border-2 bg-white/90 p-5 ${isNew ? "border-cocoa" : "border-blush-2"}`}>
+    <article className={`h-full rounded-3xl border-2 bg-white/90 p-5 ${isNew ? "border-cocoa" : "border-blush-2"}`}>
       <div className="flex flex-wrap items-center gap-2">
         {isNew && <span className="rounded-full bg-cocoa px-3 py-0.5 text-base font-bold text-white">Novo</span>}
         <span className={`rounded-full px-3 py-0.5 text-base font-bold ${STATUS_STYLE[a.status]}`}>
@@ -39,7 +41,7 @@ export function AppointmentCard({ a, isNew, showDate = true, onAction }: Props) 
         <span className="font-bold">{a.serviceName}</span> · {formatDuration(a.durationMin)} ·{" "}
         <span className="whitespace-nowrap">{formatPrice(a.priceCents)}</span>
       </p>
-      <p className="text-base text-cocoa">com {a.professionalName}</p>
+      {showProfessional && <p className="text-base text-cocoa">com {a.professionalName}</p>}
       <div className="mt-3 rounded-2xl bg-blush px-4 py-3">
         <p className="font-bold">{a.customerName}</p>
         <a

@@ -8,13 +8,13 @@ Stack: Next.js 16 (App Router, Cache Components), React 19, Tailwind CSS 4, Type
 
 ```bash
 npm install
-cp .env.example .env.local   # defina ADMIN_PASSWORD
+cp .env.example .env.local   # defina ADMIN_PASSWORD e ADMIN_USERS
 npm run dev                  # http://localhost:3000
 ```
 
 - Site das clientes: `/`
 - Agendamento: `/agendar`
-- Painel das profissionais: `/admin` (senha em `ADMIN_PASSWORD`)
+- Painel das profissionais: `/admin` (usuário e senha, veja "Contas do painel")
 
 Outros comandos:
 
@@ -27,8 +27,34 @@ npm run logo     # regenera logo e ícones em public/brand/
 
 ## Variáveis de ambiente
 
-- `ADMIN_PASSWORD`: senha única do painel `/admin`. Sem ela, o login fica desabilitado. A sessão dura 12 h, em cookie `httpOnly` assinado com HMAC.
+- `ADMIN_USERNAME`: usuário da conta master (opcional, padrão `master`). Com outro nome, `master` deixa de entrar.
+- `ADMIN_PASSWORD`: senha da conta master. Sem ela, o master fica desabilitado.
+- `ADMIN_USERS`: contas das profissionais, no formato `stefani:senha1;lorrayne:senha2;michele:senha3`.
+  - O usuário é o id da profissional.
+  - Cada entrada é dividida no primeiro `:`. A senha pode conter `:`, mas não `;`.
+  - Id sem profissional cadastrada é ignorado, com aviso no log.
+  - Sem nenhuma conta válida, o login fica desabilitado.
 - `NEXT_PUBLIC_API_BASE_URL`: URL base da API. Vazio = mesma origem (API de teste em `app/api`).
+
+## Contas do painel
+
+Há dois perfis:
+
+- **master**: vê e gerencia tudo. Pedidos e agenda de todas, catálogo completo, categorias, cadastro de profissionais e ganhos do salão.
+- **profissional**: vê e age só sobre o próprio trabalho. Pedidos, agenda, os próprios serviços (preço, duração, nome, subcategoria, ativo e criação em nome dela) e os próprios ganhos. Não troca a profissional de um serviço, não edita categorias e não cadastra profissionais.
+
+O escopo é aplicado pela API, não só pela tela. Filtro de outra profissional é ignorado. Agendamento ou serviço alheio responde 404. Ação exclusiva do master responde 403 `FORBIDDEN`.
+
+Detalhes:
+
+- O usuário não diferencia maiúsculas.
+- A sessão dura 12 h, em cookie `httpOnly` assinado com HMAC por conta. Trocar a senha de uma conta encerra só as sessões dela.
+- Pedido marcado como visto vale só para a profissional dona. A visita do master não apaga o "Novo".
+- Logins das profissionais:
+  - definidos em `ADMIN_USERS`: permanentes e não editáveis pelo painel;
+  - criados pelo master em **Serviços → Profissionais e logins**: ficam só em memória e **somem ao reiniciar o servidor**. Senha com no mínimo 6 caracteres;
+  - para um login permanente, inclua a profissional em `ADMIN_USERS` e reinicie o servidor.
+- As senhas ficam em texto puro no ambiente, o que só é aceitável na fase de teste. O backend definitivo deve guardar hash.
 
 ## Regras de agenda
 
@@ -46,6 +72,26 @@ npm run logo     # regenera logo e ícones em public/brand/
 - Preços, durações, avisos das categorias, novos serviços, novas categorias e novas profissionais são editáveis no painel. Agendamentos já feitos mantêm o preço e a duração do momento do pedido.
 - Catálogo inicial: `lib/server/seed.ts`.
 
+## Ganhos
+
+Em `/admin/ganhos`, cada profissional vê os próprios ganhos. O master vê o total do salão, a divisão por profissional e um filtro por profissional.
+
+- Base de cálculo: soma do preço gravado em cada agendamento **confirmado** com data no período.
+  - Pendentes, recusados e cancelados ficam fora.
+  - Não inclui adicionais (francesinha, encapsular) nem descontos. Não é registro de pagamento.
+- **Realizado**: atendimentos já terminados (horário de término no fuso America/Sao_Paulo). **Previsto**: os que ainda não terminaram.
+- Serviço sem preço ("Consultar valor") fica fora da soma e aparece contado à parte.
+- Períodos:
+  - Esta semana (segunda a sábado);
+  - Este mês (padrão);
+  - Mês passado;
+  - Período livre, de até 366 dias.
+- Detalhamento por serviço, do maior para o menor valor, e gráfico de barras por dia (realizado + previsto), com tabela "Ver valores por dia".
+- Endpoint `GET /api/admin/earnings?from=AAAA-MM-DD&to=AAAA-MM-DD&professionalId=`.
+  - Valores em centavos.
+  - Retorna `total`, `realized`, `expected`, `unpriced`, `byService`, `byDay` e `byProfessional`.
+  - Período inválido: 400 `VALIDATION_ERROR`.
+
 ## API de teste (dados em memória)
 
 Os dados ficam na memória do processo do servidor. **Tudo se perde ao reiniciar** (agendamentos e edições do painel), e não funciona com várias instâncias (serverless). Serve apenas para testes, até a chegada do backend definitivo. O painel mostra a faixa "Modo de teste".
@@ -62,13 +108,33 @@ O front-end acessa os dados **somente por HTTP** (`lib/api-client.ts`). Para tro
 
 ### Endpoints do painel (exigem sessão)
 
-- `POST /api/admin/login`, `POST /api/admin/logout`
-- `GET /api/admin/appointments?status=&date=&professionalId=` (inclui `conflict`)
-- `GET /api/admin/appointments/pending-count`, `POST /api/admin/appointments/mark-seen`
-- `POST /api/admin/appointments/{id}/confirm|reject|cancel` `{ reason? }`. Respostas de erro: 409 `SLOT_TAKEN` ou `INVALID_TRANSITION`.
-- `GET|POST /api/admin/services`, `PATCH /api/admin/services/{id}`
-- `GET|POST /api/admin/categories`, `PATCH /api/admin/categories/{id}`
-- `GET|POST /api/admin/professionals`
+Sem sessão: 401. Operação exclusiva do master com sessão de profissional: 403 `FORBIDDEN`. Para a profissional, toda lista vem filtrada para ela.
+
+- `POST /api/admin/login` `{ username, password }`.
+  - Erros: 401 "Usuário ou senha incorretos"; 503 `LOGIN_DISABLED` sem contas.
+- `POST /api/admin/logout`.
+- `GET /api/admin/me`: `{ role: "master" | "professional", professionalId, name }`.
+- `GET /api/admin/appointments?status=&date=&from=&to=&professionalId=`.
+  - Inclui `conflict`.
+  - `from`/`to` são inclusivos.
+  - `professionalId` só vale para o master.
+- `GET /api/admin/appointments/pending-count`: da profissional, ou do salão para o master.
+- `POST /api/admin/appointments/mark-seen` `{ ids? }`: marca só pedidos da profissional logada. Para o master não marca nada.
+- `POST /api/admin/appointments/{id}/confirm|reject|cancel` `{ reason? }`.
+  - Pedido alheio: 404.
+  - Erros: 409 `SLOT_TAKEN` ou `INVALID_TRANSITION`.
+- `GET|POST /api/admin/services`.
+  - A profissional recebe só os dela.
+  - Na criação, o serviço fica sempre em nome dela.
+- `PATCH /api/admin/services/{id}`.
+  - Serviço alheio: 404.
+  - Troca de profissional por quem não é master: 403.
+- `GET /api/admin/categories`: todos. `POST /api/admin/categories` e `PATCH /api/admin/categories/{id}`: só master.
+- `GET /api/admin/professionals`: master recebe todas; profissional recebe só a própria. `POST`: só master.
+- `GET /api/admin/accounts`: só master. `{ masterUsername, accounts: [{ professionalId, name, login: "env" | "memory" | null }] }`, sem senhas.
+- `POST /api/admin/accounts` `{ professionalId, password }`: só master. Cria ou troca o login da profissional, em memória.
+  - Profissional inexistente, conta definida em `ADMIN_USERS` ou senha com menos de 6 caracteres: 400 `VALIDATION_ERROR`.
+- `GET /api/admin/earnings?from=&to=&professionalId=`: ganhos do período (veja "Ganhos").
 
 Ciclo de status: `pending → confirmed | rejected`, `confirmed → cancelled`.
 
