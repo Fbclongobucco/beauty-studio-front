@@ -187,7 +187,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <span aria-hidden="true" className="text-blush-2">
             |
           </span>
-          <Link href="/admin/agenda" className={quick}>
+          <Link href="/admin/agenda?visao=dia" className={quick}>
             Agenda de hoje
           </Link>
           <Link href="/admin/agenda?visao=semana" className={quick}>

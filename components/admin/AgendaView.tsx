@@ -23,7 +23,11 @@ export function AgendaView() {
   const sp = useSearchParams();
   const today = nowInSalon().date;
   const date = isDateString(sp.get("dia")) ? (sp.get("dia") as string) : today;
-  const week = sp.get("visao") === "semana";
+  // Visão padrão: todos os agendamentos, sem depender do dia escolhido.
+  const view: "todos" | "dia" | "semana" =
+    sp.get("visao") === "semana" ? "semana" : sp.get("visao") === "dia" ? "dia" : "todos";
+  const week = view === "semana";
+  const showPast = sp.get("anteriores") === "1";
   const { tick, refresh, session } = useAdmin();
   const isMaster = session.role === "master";
   // Profissional vê sempre a própria agenda; o filtro só existe para o master.
@@ -37,8 +41,9 @@ export function AgendaView() {
   const thisWeek = weekStart(today);
 
   const catalog = useApi(isMaster ? "catalog" : null, api.admin.catalog);
-  const range = week ? { from: days[0], to: days[5] } : { date };
-  const { data, stale, error, reload } = useApi(`agenda:${week ? `w${ws}` : date}:${prof}:${tick}`, () =>
+  const range = week ? { from: days[0], to: days[5] } : view === "dia" ? { date } : {};
+  const rangeKey = week ? `w${ws}` : view === "dia" ? date : "todos";
+  const { data, stale, error, reload } = useApi(`agenda:${rangeKey}:${prof}:${tick}`, () =>
     api.admin.appointments({ ...range, professionalId: prof || undefined }),
   );
   const { ask, dialog } = useAppointmentAction(() => {
@@ -57,6 +62,10 @@ export function AgendaView() {
 
   const all = (data ?? stale)?.appointments;
   const list = all?.filter((a) => showClosed || a.status === "pending" || a.status === "confirmed");
+  // Visão Todos: de hoje em diante; dias anteriores só sob demanda.
+  const pastCount = view === "todos" ? (list?.filter((a) => a.date < today).length ?? 0) : 0;
+  const allList = view === "todos" ? list?.filter((a) => showPast || a.date >= today) : list;
+  const allDays = [...new Set((allList ?? []).map((a) => a.date))];
   const hidden = (all?.length ?? 0) - (list?.length ?? 0);
   const selected = list?.find((a) => a.id === selectedId) ?? null;
 
@@ -69,7 +78,10 @@ export function AgendaView() {
       <h1 className="font-brand text-2xl font-semibold">Agenda</h1>
 
       <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Visão da agenda">
-        <button type="button" aria-pressed={!week} onClick={() => set({ visao: undefined })} className={pill(!week)}>
+        <button type="button" aria-pressed={view === "todos"} onClick={() => set({ visao: undefined })} className={pill(view === "todos")}>
+          Todos
+        </button>
+        <button type="button" aria-pressed={view === "dia"} onClick={() => set({ visao: "dia" })} className={pill(view === "dia")}>
           Dia
         </button>
         <button type="button" aria-pressed={week} onClick={() => set({ visao: "semana" })} className={pill(week)}>
@@ -77,7 +89,11 @@ export function AgendaView() {
         </button>
       </div>
 
-      {week ? (
+      {view === "todos" ? (
+        <p className="mt-3 text-base">
+          Todos os agendamentos{showPast ? "" : " de hoje em diante"}, agrupados por dia e em ordem de horário.
+        </p>
+      ) : week ? (
         <>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <button type="button" className={navBtn} onClick={() => set({ dia: addDays(ws, -7) })} aria-label="Semana anterior">
@@ -152,6 +168,37 @@ export function AgendaView() {
         </p>
       ) : !list ? (
         <Spinner />
+      ) : view === "todos" ? (
+        <div className="space-y-8">
+          {pastCount > 0 && (
+            <button
+              type="button"
+              className="min-h-12 font-bold underline underline-offset-4"
+              onClick={() => set({ anteriores: showPast ? undefined : "1" })}
+            >
+              {showPast ? "Ocultar dias anteriores" : `Mostrar dias anteriores (${pastCount})`}
+            </button>
+          )}
+          {allDays.length === 0 ? (
+            <p className="rounded-3xl bg-blush p-6 text-center text-lg">Nenhum agendamento{showPast ? "" : " de hoje em diante"}.</p>
+          ) : (
+            allDays.map((d) => (
+              <section key={d} aria-label={formatDateLong(d)}>
+                <h2 className="mb-3 text-lg font-bold first-letter:uppercase">
+                  {formatDateLong(d)}
+                  {d === today && " (hoje)"}
+                </h2>
+                <ul className="grid gap-4 lg:grid-cols-2 min-[1440px]:grid-cols-3">
+                  {allList!
+                    .filter((a) => a.date === d)
+                    .map((a) => (
+                      <li key={a.id}>{card(a)}</li>
+                    ))}
+                </ul>
+              </section>
+            ))
+          )}
+        </div>
       ) : week ? (
         <>
           {/* Computador: grade com detalhe ao lado. */}
