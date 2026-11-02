@@ -25,6 +25,13 @@ npm run build && npm start
 npm run logo     # regenera logo e ícones em public/brand/
 ```
 
+## Produção (Vercel)
+
+O front sobe na Vercel e a API numa VPS, no mesmo domínio (ex.: `salao.com.br` e `api.salao.com.br`). Passo a passo no `DEPLOY.md` do repositório `beauty-studio-backend`.
+- Variável na Vercel: `NEXT_PUBLIC_API_BASE_URL=https://api.salao.com.br` (fixada no build: faça novo deploy depois de mudar).
+- Use domínio próprio: com `*.vercel.app`, o painel não enxerga a sessão.
+- Com `NEXT_PUBLIC_API_BASE_URL` definido, a API de teste em memória (`/api/*`) responde 404.
+
 ## Variáveis de ambiente
 
 - `ADMIN_USERNAME`: usuário da conta master (opcional, padrão `master`). Com outro nome, `master` deixa de entrar.
