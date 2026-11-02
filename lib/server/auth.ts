@@ -100,9 +100,11 @@ export function sessionCookie(token: string) {
 }
 
 export async function sessionFor(sub: string): Promise<AdminSession | null> {
-  if (sub === MASTER_USER) return { role: "master", professionalId: null, name: "" };
+  if (sub === MASTER_USER) return { role: "master", professionalId: null, name: "", whatsappPhone: null };
   const prof = (await repo.listProfessionals()).find((p) => p.id === sub);
-  return prof ? { role: "professional", professionalId: prof.id, name: prof.name } : null;
+  return prof
+    ? { role: "professional", professionalId: prof.id, name: prof.name, whatsappPhone: prof.whatsappPhone }
+    : null;
 }
 
 export type SessionResult = { session: AdminSession; denied?: undefined } | { session?: undefined; denied: Response };

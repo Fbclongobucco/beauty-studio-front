@@ -13,13 +13,22 @@ import { nowInSalon } from "@/lib/domain/schedule";
 
 export const POLL_MS = 20_000;
 
-type Ctx = { pending: number; unseen: number; refresh: () => void; tick: number; session: AdminSession };
+type Ctx = {
+  pending: number;
+  unseen: number;
+  refresh: () => void;
+  tick: number;
+  session: AdminSession;
+  /** Atualiza a sessão sem recarregar (ex.: depois de salvar o WhatsApp). */
+  setSession: (s: AdminSession) => void;
+};
 const AdminCtx = createContext<Ctx>({
   pending: 0,
   unseen: 0,
   refresh: () => {},
   tick: 0,
-  session: { role: "master", professionalId: null, name: "" },
+  session: { role: "master", professionalId: null, name: "", whatsappPhone: null },
+  setSession: () => {},
 });
 export const useAdmin = () => useContext(AdminCtx);
 
@@ -255,7 +264,20 @@ export function AdminShell({ children }: { children: ReactNode }) {
       )}
       <main className="mx-auto max-w-3xl px-4 pb-16 pt-5 lg:max-w-[90rem] lg:px-8 lg:pt-8">
         {session ? (
-          <AdminCtx.Provider value={{ ...count, refresh, tick, session }}>{children}</AdminCtx.Provider>
+          <AdminCtx.Provider value={{ ...count, refresh, tick, session, setSession }}>
+            {session.role === "professional" && !session.whatsappPhone && (
+              <p
+                role="status"
+                className="mb-5 rounded-2xl border-2 border-pending bg-pending-bg px-4 py-3 font-bold text-coffee"
+              >
+                Cadastre seu WhatsApp para receber os pedidos novos.{" "}
+                <Link href="/admin/servicos#meu-whatsapp" className="underline underline-offset-4">
+                  Cadastrar agora
+                </Link>
+              </p>
+            )}
+            {children}
+          </AdminCtx.Provider>
         ) : (
           <Spinner />
         )}

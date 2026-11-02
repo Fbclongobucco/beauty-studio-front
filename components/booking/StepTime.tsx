@@ -45,7 +45,7 @@ export function StepTime({ service, date, selected, notice, onSelect, onChangeDa
         </div>
       ) : !data ? (
         <Spinner label="Buscando horários..." />
-      ) : data.slots.length === 0 ? (
+      ) : data.slots.length === 0 && (data.taken ?? []).length === 0 ? (
         <div className="rounded-3xl bg-blush p-5 text-center">
           <p className="font-bold">Sem horários livres neste dia.</p>
           <Button variant="secondary" className="mt-4 w-full" onClick={onChangeDay}>
@@ -54,25 +54,53 @@ export function StepTime({ service, date, selected, notice, onSelect, onChangeDa
         </div>
       ) : (
         <>
-          <p className="mb-3 text-base">Horário de início. O atendimento dura {formatDuration(service.durationMin)}.</p>
+          {data.slots.length === 0 ? (
+            <div role="status" className="mb-4 rounded-3xl bg-blush p-5 text-center">
+              <p className="font-bold">Todos os horários deste dia já estão ocupados.</p>
+              <Button variant="secondary" className="mt-4 w-full" onClick={onChangeDay}>
+                Escolher outro dia
+              </Button>
+            </div>
+          ) : (
+            <p className="mb-3 text-base">Horário de início. O atendimento dura {formatDuration(service.durationMin)}.</p>
+          )}
           <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-            {data.slots.map((t) => {
-              const sel = t === selected;
-              return (
-                <li key={t}>
-                  <button
-                    type="button"
-                    aria-pressed={sel}
-                    onClick={() => onSelect(t)}
-                    className={`min-h-14 w-full rounded-2xl border-2 text-lg font-bold ${
-                      sel ? "border-cocoa bg-cocoa text-white" : "border-blush-2 bg-white/80 text-coffee hover:border-cocoa"
-                    }`}
-                  >
-                    {t}
-                  </button>
-                </li>
-              );
-            })}
+            {/* HH:mm tem tamanho fixo: a ordem de texto é a ordem do horário. */}
+            {[
+              ...data.slots.map((t) => ({ t, taken: false })),
+              ...(data.taken ?? []).map((t) => ({ t, taken: true })),
+            ]
+              .sort((x, y) => x.t.localeCompare(y.t))
+              .map(({ t, taken }) => {
+                const sel = !taken && t === selected;
+                return (
+                  <li key={t}>
+                    {taken ? (
+                      <button
+                        type="button"
+                        disabled
+                        aria-disabled="true"
+                        aria-label={`${t}, ocupado`}
+                        className="flex min-h-14 w-full cursor-not-allowed flex-col items-center justify-center rounded-2xl border-2 border-dashed border-cocoa/30 bg-black/5 text-lg font-bold leading-tight text-cocoa/50"
+                      >
+                        {t}
+                        <span className="text-sm font-normal">ocupado</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        aria-pressed={sel}
+                        onClick={() => onSelect(t)}
+                        className={`min-h-14 w-full rounded-2xl border-2 text-lg font-bold ${
+                          sel ? "border-cocoa bg-cocoa text-white" : "border-blush-2 bg-white/80 text-coffee hover:border-cocoa"
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
           </ul>
         </>
       )}

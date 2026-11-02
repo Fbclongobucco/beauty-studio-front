@@ -10,7 +10,6 @@ A API de teste SHALL seguir o contrato de acompanhamento do backend definitivo:
   - os pendentes;
   - os confirmados que ainda não terminaram;
   - os recusados e cancelados com início no futuro;
-- `DELETE /api/appointments/mine/{id}` tira o id do cookie e responde a lista atualizada, sem alterar o pedido.
 
 O cookie MUST NOT conter dados da cliente.
 
@@ -21,7 +20,3 @@ O cookie MUST NOT conter dados da cliente.
 #### Scenario: Cookie adulterado
 - **WHEN** a requisição traz um `my_requests` com valor alterado
 - **THEN** `GET /api/appointments/mine` responde 200 com a lista vazia
-
-#### Scenario: Esquecer pedido
-- **WHEN** o front chama `DELETE /api/appointments/mine/{id}` para um pedido do cookie
-- **THEN** a resposta traz a lista sem esse pedido, e o pedido continua no painel com o mesmo status

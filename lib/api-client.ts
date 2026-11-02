@@ -12,6 +12,7 @@ import type {
   EarningsResponse,
   Professional,
   PublicAppointment,
+  MyRequestsResponse,
   Service,
   ServicesResponse,
   StatusAction,
@@ -26,6 +27,8 @@ const FRIENDLY: Partial<Record<ApiError["code"], string>> = {
   INVALID_TRANSITION: "Essa ação não é possível no status atual.",
   UNAUTHORIZED: "Faça login para continuar.",
   FORBIDDEN: "Você não tem permissão para esta ação.",
+  TOO_MANY_ATTEMPTS: "Muitas tentativas de login. Aguarde alguns minutos e tente de novo.",
+  SERVICE_UNAVAILABLE: "Serviço temporariamente indisponível. Tente de novo em instantes.",
 };
 
 export class ApiRequestError extends Error {
@@ -84,12 +87,17 @@ export const api = {
   createAppointment: (input: CreateAppointmentInput) =>
     request<Appointment>("/api/appointments", { method: "POST", json: input }),
   appointment: (id: string) => request<PublicAppointment>(`/api/appointments/${encodeURIComponent(id)}`),
+  /** Pedidos em andamento deste aparelho (cookie gravado pela API). */
+  myRequests: () => request<MyRequestsResponse>("/api/appointments/mine"),
 
   admin: {
     login: (username: string, password: string) =>
       request<{ ok: true }>("/api/admin/login", { method: "POST", json: { username, password } }),
     logout: () => request<{ ok: true }>("/api/admin/logout", { method: "POST" }),
     me: () => request<AdminSession>("/api/admin/me"),
+    /** A profissional grava ou remove (null) o próprio WhatsApp; devolve a sessão atualizada. */
+    updateMe: (patch: { whatsappPhone: string | null }) =>
+      request<AdminSession>("/api/admin/me", { method: "PATCH", json: patch }),
     appointments: (f: { status?: string; date?: string; from?: string; to?: string; professionalId?: string } = {}) =>
       request<{ appointments: AdminAppointment[] }>(`/api/admin/appointments?${qs(f)}`),
     pendingCount: () => request<{ pending: number; unseen: number }>("/api/admin/appointments/pending-count"),

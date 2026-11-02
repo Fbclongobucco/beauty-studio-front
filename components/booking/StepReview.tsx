@@ -59,7 +59,8 @@ export function StepReview({ service, date, time, customer, onEdit, onTaken, onD
         </dl>
       </Card>
       <p className="mt-5">
-        O pedido fica <strong>aguardando confirmação</strong> do salão. Você recebe a confirmação pelo WhatsApp.
+        O pedido fica <strong>aguardando confirmação</strong> do salão. As atualizações do pedido (confirmação, recusa
+        ou cancelamento) chegam por mensagem no WhatsApp <strong className="whitespace-nowrap">{customer.phone}</strong>.
       </p>
       {error && (
         <p role="alert" className="mt-4 rounded-2xl bg-danger-bg px-4 py-3 font-bold text-danger">

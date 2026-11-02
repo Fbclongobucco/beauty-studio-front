@@ -19,6 +19,10 @@ import * as service from "@/app/api/admin/services/[id]/route";
 import * as servicePhoto from "@/app/api/admin/services/[id]/photo/route";
 import * as photoFile from "@/app/api/service-photos/[photoId]/route";
 import * as publicServices from "@/app/api/services/route";
+import * as availability from "@/app/api/availability/route";
+import * as createAppt from "@/app/api/appointments/route";
+import * as apptStatus from "@/app/api/appointments/[id]/route";
+import * as mine from "@/app/api/appointments/mine/route";
 import { resetMemoryAccounts } from "./accounts";
 import { createSessionToken, SESSION_COOKIE } from "./auth";
 import { repo } from "./repository";
@@ -140,6 +144,7 @@ describe("login e sessão", () => {
       role: "professional",
       professionalId: "lorrayne",
       name: "Lorrayne Longobuco",
+      whatsappPhone: null,
     });
     expect((await call(me, "GET", { as: "master" })).body.role).toBe("master");
   });
@@ -384,5 +389,154 @@ describe("foto do serviço", () => {
     const r = await call(service, "PATCH", { as: "master", params: { id: "manicure" }, body: { photoUrl: "https://x/y.jpg" } });
     expect(r.status).toBe(200);
     expect(r.body.photoUrl).toBeNull();
+  });
+});
+
+describe("disponibilidade com horários ocupados (show-taken-slots)", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("confirmado vem em taken e sai de slots; pendente não ocupa", async () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: NOW });
+    const confirmed = await book("manicure", "11:00");
+    await repo.transition(confirmed.id, "confirm");
+    await book("manicure", "15:00"); // pendente
+    const r = await call(availability, "GET", { query: `serviceId=manicure&date=${FRI}` });
+    expect(r.status).toBe(200);
+    expect(r.body.taken).toEqual(["11:00"]);
+    expect(r.body.slots).not.toContain("11:00");
+    expect(r.body.slots).toContain("15:00");
+    expect(JSON.stringify(r.body)).not.toContain("Maria");
+  });
+});
+
+describe("acompanhamento do pedido (add-customer-request-tracking)", () => {
+  afterEach(() => vi.useRealTimers());
+
+  type Res = { status: number; body: { appointments?: { id: string; status: string }[]; id?: string }; cookie: string | null };
+
+  async function hit(
+    mod: Record<string, unknown>,
+    method: string,
+    opts: { cookie?: string | null; body?: unknown; params?: Record<string, string> } = {},
+  ): Promise<Res> {
+    const headers: Record<string, string> = {};
+    if (opts.cookie) headers.cookie = opts.cookie;
+    if (opts.body !== undefined) headers["content-type"] = "application/json";
+    const req = new NextRequest("http://localhost/api/appointments", {
+      method,
+      headers,
+      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+    });
+    const res = await (mod[method] as Handler)(req, { params: Promise.resolve(opts.params ?? {}) });
+    const set = res.headers.get("set-cookie");
+    return { status: res.status, body: await res.json(), cookie: set ? set.split(";")[0] : null };
+  }
+
+  const order = (time: string, serviceId = "manicure", date = FRI) => ({
+    serviceId,
+    date,
+    time,
+    customerName: "Maria Souza",
+    customerPhone: "(21) 98888-7777",
+  });
+
+  it("criar grava o cookie e /mine traz o pendente, sem dados da cliente no cookie", async () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: NOW });
+    const a = await hit(createAppt, "POST", { body: order("11:00") });
+    expect(a.status).toBe(201);
+    expect(a.cookie).toMatch(/^my_requests=/);
+    expect(Buffer.from(a.cookie!.split("=")[1].split(".")[0], "base64url").toString()).not.toContain("Maria");
+    const m = await hit(mine, "GET", { cookie: a.cookie });
+    expect(m.body.appointments?.map((x) => x.id)).toEqual([a.body.id]);
+    expect(m.body.appointments?.[0].status).toBe("pending");
+  });
+
+  it("abrir o link do pedido grava o cookie neste aparelho", async () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: NOW });
+    const appt = await book("manicure");
+    const r = await hit(apptStatus, "GET", { params: { id: appt.id } });
+    expect((await hit(mine, "GET", { cookie: r.cookie })).body.appointments?.map((x) => x.id)).toEqual([appt.id]);
+  });
+
+  it("filtra em andamento: pendente, confirmado futuro e recusado futuro; passado sai", async () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: NOW });
+    const a = await hit(createAppt, "POST", { body: order("15:00") });
+    const b = await hit(createAppt, "POST", { body: order("10:00", "pedicure", "2026-11-03"), cookie: a.cookie });
+    const c = await hit(createAppt, "POST", { body: order("14:00", "depilacao", "2026-11-04"), cookie: b.cookie });
+    await repo.transition(c.body.id!, "reject");
+    await repo.transition(b.body.id!, "confirm");
+    expect((await hit(mine, "GET", { cookie: c.cookie })).body.appointments?.map((x) => x.id)).toEqual([
+      b.body.id,
+      c.body.id,
+      a.body.id,
+    ]);
+    vi.setSystemTime(new Date("2026-11-04T18:00:00Z")); // quarta 15:00 SP
+    expect((await hit(mine, "GET", { cookie: c.cookie })).body.appointments?.map((x) => x.id)).toEqual([a.body.id]);
+  });
+
+  it("cookie adulterado ou ausente: lista vazia", async () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: NOW });
+    const a = await hit(createAppt, "POST", { body: order("11:00") });
+    const tampered = a.cookie!.slice(0, -3) + "abc";
+    expect((await hit(mine, "GET", { cookie: tampered })).body.appointments).toEqual([]);
+    const none = await hit(mine, "GET");
+    expect(none.body.appointments).toEqual([]);
+    expect(none.cookie).toBeNull();
+  });
+
+  it("limite de 10: o mais antigo sai", async () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: NOW });
+    let cookie: string | null = null;
+    const ids: string[] = [];
+    for (let i = 0; i < 11; i++) {
+      const t = `${String(9 + Math.floor(i / 2)).padStart(2, "0")}:${i % 2 ? "30" : "00"}`;
+      const r = await hit(createAppt, "POST", { body: order(t), cookie });
+      ids.push(r.body.id!);
+      cookie = r.cookie;
+    }
+    const listed = (await hit(mine, "GET", { cookie })).body.appointments!.map((x) => x.id);
+    expect(listed).toHaveLength(10);
+    expect(listed).not.toContain(ids[0]);
+    expect(listed).toContain(ids[10]);
+  });
+});
+
+describe("WhatsApp da profissional (adapt-front-to-backend)", () => {
+  it("a profissional salva o próprio número em E.164 e o master vê só para leitura", async () => {
+    const r = await call(me, "PATCH", { as: "stefani", body: { whatsappPhone: "(21) 99999-0000" } });
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ role: "professional", professionalId: "stefani", whatsappPhone: "+5521999990000" });
+    expect((await call(me, "GET", { as: "stefani" })).body.whatsappPhone).toBe("+5521999990000");
+    const list = await call(professionals, "GET", { as: "master" });
+    const stefani = list.body.professionals.find((p: { id: string }) => p.id === "stefani");
+    expect(stefani.whatsappPhone).toBe("+5521999990000");
+  });
+
+  it("null ou vazio remove o número", async () => {
+    await call(me, "PATCH", { as: "lorrayne", body: { whatsappPhone: "21988887777" } });
+    expect((await call(me, "PATCH", { as: "lorrayne", body: { whatsappPhone: null } })).body.whatsappPhone).toBeNull();
+    await call(me, "PATCH", { as: "lorrayne", body: { whatsappPhone: "21988887777" } });
+    expect((await call(me, "PATCH", { as: "lorrayne", body: { whatsappPhone: "  " } })).body.whatsappPhone).toBeNull();
+  });
+
+  it("número inválido: 400 em fields.whatsappPhone, sem mudar o número", async () => {
+    await call(me, "PATCH", { as: "michele", body: { whatsappPhone: "21977776666" } });
+    const r = await call(me, "PATCH", { as: "michele", body: { whatsappPhone: "9999-0000" } });
+    expect(r.status).toBe(400);
+    expect(r.body.code).toBe("VALIDATION_ERROR");
+    expect(r.body.fields.whatsappPhone).toBe("Informe o WhatsApp com DDD, ex.: (21) 96811-7976");
+    expect((await call(me, "GET", { as: "michele" })).body.whatsappPhone).toBe("+5521977776666");
+  });
+
+  it("master não altera: 403 FORBIDDEN", async () => {
+    const r = await call(me, "PATCH", { as: "master", body: { whatsappPhone: "21999990000" } });
+    expect(r.status).toBe(403);
+    expect(r.body.code).toBe("FORBIDDEN");
+  });
+
+  it("o número não aparece no catálogo público", async () => {
+    await call(me, "PATCH", { as: "stefani", body: { whatsappPhone: "21999990000" } });
+    const res = await (publicServices.GET as () => Promise<Response>)();
+    expect(JSON.stringify(await res.json())).not.toContain("99999");
   });
 });

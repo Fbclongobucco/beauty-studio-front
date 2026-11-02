@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import { api, ApiRequestError } from "@/lib/api-client";
-import { centsToInput, formatDurationShort, formatPrice } from "@/lib/domain/format";
+import { centsToInput, formatDurationShort, formatPhone, formatPrice } from "@/lib/domain/format";
 import { parsePriceBRL } from "@/lib/domain/validation";
 import type { Category, Professional, Service } from "@/lib/domain/types";
 import { useApi } from "@/lib/client/useApi";
@@ -335,6 +335,10 @@ function ProfessionalsSection({ professionals, onSaved }: { professionals: Profe
             <p>
               <span className="font-bold">{p.name}</span> · usuário <code>{p.id}</code>
             </p>
+            {/* Só leitura: o número é a profissional quem informa, no painel dela */}
+            <p className={`text-base ${p.whatsappPhone ? "" : "text-cocoa"}`}>
+              {p.whatsappPhone ? `WhatsApp: ${formatPhone(p.whatsappPhone)}` : "WhatsApp não cadastrado"}
+            </p>
             <LoginStatus
               professional={p}
               login={accounts.data ? (byId.get(p.id) ?? null) : undefined}
@@ -373,7 +377,7 @@ function LoginStatus({
   onSaved,
 }: {
   professional: Professional;
-  login: "env" | "memory" | null | undefined;
+  login: "env" | "db" | "memory" | null | undefined;
   open: boolean;
   onOpen: () => void;
   onSaved: (msg: string) => void;
@@ -403,7 +407,11 @@ function LoginStatus({
   return (
     <div>
       <p className={`text-base ${login ? "text-ok" : "text-warn"}`}>
-        {login ? "Login ativo (criado no painel; some ao reiniciar o servidor)" : "Sem login: ainda não consegue entrar"}
+        {login === "db"
+          ? "Login ativo (criado no painel)"
+          : login
+            ? "Login ativo (criado no painel; some ao reiniciar o servidor)"
+            : "Sem login: ainda não consegue entrar"}
       </p>
       {!open ? (
         <button type="button" onClick={onOpen} className="min-h-12 font-bold underline underline-offset-4">

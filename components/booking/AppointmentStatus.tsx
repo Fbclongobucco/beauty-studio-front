@@ -1,17 +1,19 @@
 "use client";
 
 import { useParams, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
 import { api } from "@/lib/api-client";
 import { formatDateLong, formatDuration, formatPrice, STATUS_LABEL, whatsappLink } from "@/lib/domain/format";
 import type { AppointmentStatus as Status } from "@/lib/domain/types";
 import { useApi } from "@/lib/client/useApi";
+import { markShownThisVisit } from "@/lib/client/my-requests-visit";
 import { SALON } from "@/lib/salon";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
 import { WhatsAppIcon } from "@/components/ui/icons";
 
-const STATUS_STYLE: Record<Status, string> = {
+export const STATUS_STYLE: Record<Status, string> = {
   pending: "bg-warn-bg text-warn",
   confirmed: "bg-ok-bg text-ok",
   rejected: "bg-danger-bg text-danger",
@@ -29,13 +31,16 @@ export function AppointmentStatus() {
   const { id } = useParams<{ id: string }>();
   const isNew = useSearchParams().get("novo") === "1";
   const { data, error, reload, loading } = useApi(`appt:${id}`, () => api.appointment(id));
+  // Já viu um pedido nesta visita: a página inicial não a manda de volta para cá.
+  useEffect(() => markShownThisVisit(), []);
+
 
   if (error?.code === "NOT_FOUND") {
     return (
       <div className="text-center">
         <h1 className="font-brand text-2xl font-semibold lg:text-4xl">Agendamento não encontrado</h1>
         <p className="mt-3">Confira se o link está completo.</p>
-        <LinkButton href="/" className="mt-6 w-full">
+        <LinkButton href="/?inicio=1" className="mt-6 w-full">
           Ir para o início
         </LinkButton>
       </div>
@@ -104,9 +109,10 @@ export function AppointmentStatus() {
           <WhatsAppIcon className="h-6 w-6" />
           Falar com o salão
         </a>
-        <LinkButton href="/" variant="ghost">
+        <LinkButton href="/?inicio=1" variant="ghost">
           Voltar para o início
         </LinkButton>
+
       </div>
     </div>
   );

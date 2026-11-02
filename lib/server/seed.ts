@@ -9,9 +9,9 @@ import type { Category, Professional, Service } from "@/lib/domain/types";
 //   a revisar pelas profissionais no painel admin.
 
 export const seedProfessionals: Professional[] = [
-  { id: "stefani", name: "Stéfani Longo Bucco", active: true },
-  { id: "lorrayne", name: "Lorrayne Longobuco", active: true },
-  { id: "michele", name: "Michele Batista", active: true },
+  { id: "stefani", name: "Stéfani Longo Bucco", active: true, whatsappPhone: null },
+  { id: "lorrayne", name: "Lorrayne Longobuco", active: true, whatsappPhone: null },
+  { id: "michele", name: "Michele Batista", active: true, whatsappPhone: null },
 ];
 
 export const seedCategories: Category[] = [

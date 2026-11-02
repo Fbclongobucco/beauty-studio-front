@@ -68,11 +68,12 @@ describe("sessão", () => {
   });
 
   it("monta a sessão com perfil e nome", async () => {
-    expect(await sessionFor("master")).toEqual({ role: "master", professionalId: null, name: "" });
+    expect(await sessionFor("master")).toEqual({ role: "master", professionalId: null, name: "", whatsappPhone: null });
     expect(await sessionFor("lorrayne")).toEqual({
       role: "professional",
       professionalId: "lorrayne",
       name: "Lorrayne Longobuco",
+      whatsappPhone: null,
     });
     expect(await sessionFor("maria")).toBeNull();
   });

@@ -1,8 +1,10 @@
 import Image from "next/image";
+import { Suspense } from "react";
 import donas from "@/public/images/equipe/donas.png";
 import { Logo } from "@/components/Logo";
 import { LinkButton } from "@/components/ui/Button";
 import { Ornament } from "@/components/ui/Ornament";
+import { MyRequests } from "@/components/public/MyRequests";
 import { ServiceList } from "@/components/public/ServiceList";
 import { SiteFooter } from "@/components/public/SiteFooter";
 import { SALON } from "@/lib/salon";
@@ -16,6 +18,9 @@ export default function Home() {
           <Logo width={176} priority />
           <p className="mt-3 font-script text-3xl leading-tight text-cocoa lg:text-4xl">Mais que beleza, é sobre você!</p>
           <p className="mt-2 text-lg lg:text-xl">Escolha o serviço, o dia e o horário. É rápido e fácil.</p>
+          <Suspense fallback={null}>
+            <MyRequests />
+          </Suspense>
           <LinkButton href="/agendar" className="mt-4 w-full text-xl lg:mt-6 lg:w-auto lg:px-14">
             Agendar horário
           </LinkButton>

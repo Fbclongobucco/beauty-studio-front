@@ -39,6 +39,8 @@ export type TransitionResult =
 export interface Repository {
   listProfessionals(): Promise<Professional[]>;
   createProfessional(name: string): Promise<Professional>;
+  /** Grava o WhatsApp da profissional (E.164) ou remove com null. */
+  updateProfessionalWhatsapp(id: string, phoneE164: string | null): Promise<Professional | null>;
   listCategories(): Promise<Category[]>;
   createCategory(name: string, note: string | null): Promise<Category>;
   updateCategory(id: string, patch: Partial<Pick<Category, "name" | "note">>): Promise<Category | null>;
@@ -117,8 +119,19 @@ export function createMemoryRepository(store: () => Store = getStore): Repositor
     },
     async createProfessional(name) {
       const s = store();
-      const p: Professional = { id: uniqueId(name.split(" ")[0], s.professionals), name, active: true };
+      const p: Professional = {
+        id: uniqueId(name.split(" ")[0], s.professionals),
+        name,
+        active: true,
+        whatsappPhone: null,
+      };
       s.professionals.push(p);
+      return structuredClone(p);
+    },
+    async updateProfessionalWhatsapp(id, phoneE164) {
+      const p = store().professionals.find((x) => x.id === id);
+      if (!p) return null;
+      p.whatsappPhone = phoneE164;
       return structuredClone(p);
     },
     async listCategories() {

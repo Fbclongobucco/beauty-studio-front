@@ -4,6 +4,8 @@ export interface Professional {
   id: ID;
   name: string;
   active: boolean;
+  /** WhatsApp da profissional em E.164, informado por ela no painel; null = sem número. Só no painel. */
+  whatsappPhone: string | null;
 }
 
 export interface Category {
@@ -64,7 +66,8 @@ export type AdminRole = "master" | "professional";
 export interface AdminAccount {
   professionalId: ID;
   name: string;
-  login: "env" | "memory" | null;
+  /** "db": criado no painel e guardado no backend definitivo; "memory": criado no painel da API de teste. */
+  login: "env" | "db" | "memory" | null;
 }
 
 export interface AdminAccountsResponse {
@@ -76,6 +79,8 @@ export interface AdminSession {
   role: AdminRole;
   professionalId: ID | null;
   name: string;
+  /** WhatsApp da profissional em E.164; sempre null para o master. */
+  whatsappPhone: string | null;
 }
 
 export type ConflictKind = "confirmed" | "pending";
@@ -90,7 +95,9 @@ export type ApiErrorCode =
   | "NOT_FOUND"
   | "UNAUTHORIZED"
   | "FORBIDDEN"
-  | "LOGIN_DISABLED";
+  | "LOGIN_DISABLED"
+  | "TOO_MANY_ATTEMPTS"
+  | "SERVICE_UNAVAILABLE";
 
 export interface ApiError {
   code: ApiErrorCode;
@@ -125,6 +132,8 @@ export interface AvailabilityResponse {
   serviceId: ID;
   date: string;
   slots: string[];
+  /** Horários da grade ocupados por confirmado (aparecem em cinza). Ausente em backends antigos. */
+  taken?: string[];
 }
 
 export interface DayAvailability {
@@ -159,6 +168,11 @@ export interface PublicAppointment {
   startISO: string;
   endISO: string;
   customerFirstName: string;
+}
+
+/** Pedidos em andamento lembrados neste aparelho (cookie my_requests). */
+export interface MyRequestsResponse {
+  appointments: PublicAppointment[];
 }
 
 export interface AdminAppointment extends Appointment {
