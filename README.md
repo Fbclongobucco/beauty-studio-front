@@ -31,6 +31,7 @@ O front sobe na Vercel e a API numa VPS, no mesmo domínio (ex.: `salao.com.br` 
 - Variável na Vercel: `NEXT_PUBLIC_API_BASE_URL=https://api.salao.com.br` (fixada no build: faça novo deploy depois de mudar).
 - Use domínio próprio: com `*.vercel.app`, o painel não enxerga a sessão.
 - Com `NEXT_PUBLIC_API_BASE_URL` definido, a API de teste em memória (`/api/*`) responde 404.
+- **Provisório, sem domínio próprio:** use `API_PROXY_URL` (ex.: `https://203-0-113-10.sslip.io`) no lugar de `NEXT_PUBLIC_API_BASE_URL`. A Vercel repassa `/api` e `/media` ao backend (rewrites em `next.config.ts`), e tudo fica no endereço `.vercel.app`, com login e cookies funcionando. Detalhes e limitações no `DEPLOY.md` do backend.
 
 ## Variáveis de ambiente
 
