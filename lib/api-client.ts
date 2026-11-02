@@ -67,6 +67,11 @@ async function request<T>(path: string, init?: RequestInit & { json?: unknown })
   );
 }
 
+/** `photoUrl` relativo vem da origem da API; com base configurada, prefixa a base. */
+export function photoSrc(url: string): string {
+  return url.startsWith("/") && !url.startsWith("//") ? `${BASE}${url}` : url;
+}
+
 const qs = (p: Record<string, string | number | undefined>) =>
   new URLSearchParams(Object.entries(p).filter(([, v]) => v !== undefined && v !== "") as [string, string][]).toString();
 
@@ -101,6 +106,15 @@ export const api = {
       request<Service>("/api/admin/services", { method: "POST", json: input }),
     updateService: (id: string, patch: Partial<ServiceInput>) =>
       request<Service>(`/api/admin/services/${encodeURIComponent(id)}`, { method: "PATCH", json: patch }),
+    /** Envia a foto em multipart (campo `photo`), substituindo a anterior. */
+    setServicePhoto: (id: string, photo: Blob, filename = "foto.jpg") => {
+      const form = new FormData();
+      form.append("photo", photo, filename);
+      // Sem content-type manual: o navegador define o boundary do multipart.
+      return request<Service>(`/api/admin/services/${encodeURIComponent(id)}/photo`, { method: "PUT", body: form });
+    },
+    removeServicePhoto: (id: string) =>
+      request<Service>(`/api/admin/services/${encodeURIComponent(id)}/photo`, { method: "DELETE" }),
     createCategory: (name: string, note?: string | null) =>
       request<Category>("/api/admin/categories", { method: "POST", json: { name, note } }),
     updateCategory: (id: string, patch: { name?: string; note?: string | null }) =>

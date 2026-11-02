@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { DurationSelect, Field, PriceInput, inputClass } from "./fields";
 import { ServiceForm } from "./ServiceForm";
+import { ServiceThumb } from "@/components/ui/ServicePhoto";
 import { useAdmin } from "./AdminShell";
 
 const PRICE_ERROR = "Informe um valor em reais, ex.: 45,00";
@@ -35,8 +36,8 @@ export function ServicesAdmin() {
 
   return (
     <div>
-      <h1 className="font-brand text-2xl font-semibold">Serviços e valores</h1>
-      <p className="mt-1 text-base">
+      <h1 className="font-brand text-2xl font-semibold lg:text-4xl">Serviços e valores</h1>
+      <p className="mt-2 text-base">
         Altere preço e duração e salve. A mudança vale na hora para as clientes. Agendamentos já
         feitos mantêm o valor e a duração do dia do pedido.
       </p>
@@ -56,9 +57,9 @@ export function ServicesAdmin() {
           onSaved={done}
         />
         {isMaster && (
-          <section className="mt-10">
-            <h2 className="font-brand text-2xl font-semibold">Avisos das categorias</h2>
-            <div className="mt-3 grid grid-cols-2 gap-4 min-[1440px]:grid-cols-3">
+          <section className="mt-14 lg:mt-16">
+            <h2 className="font-brand text-2xl font-semibold lg:text-3xl">Avisos das categorias</h2>
+            <div className="mt-5 grid grid-cols-2 gap-6 xl:grid-cols-3">
               {categories.map((c) => (
                 <div key={`${c.id}:${c.note ?? ""}`}>
                   <h3 className="font-bold text-coffee">{c.name}</h3>
@@ -133,7 +134,7 @@ function CategorySection({
 }) {
   return (
     <section className="mt-8">
-      <h2 className="font-brand text-2xl font-semibold text-coffee">{category.name}</h2>
+      <h2 className="font-brand text-2xl font-semibold text-coffee lg:text-3xl">{category.name}</h2>
       {isMaster && <CategoryNote category={category} onSaved={onSaved} />}
       {services.length === 0 ? (
         <p className="mt-3 text-base">Nenhum serviço nesta categoria.</p>
@@ -179,11 +180,11 @@ function CategoryNote({ category, onSaved }: { category: Category; onSaved: (msg
   }
 
   return (
-    <div className="mt-3 rounded-3xl bg-blush p-4">
+    <div className="mt-3 rounded-3xl bg-blush p-5">
       <Field id={id} label="Aviso para as clientes (aparece ao abrir a categoria)" error={err ?? undefined}>
         <textarea id={id} value={note} maxLength={200} rows={2} onChange={(e) => setNote(e.target.value)} className={inputClass} />
       </Field>
-      <Button variant="secondary" className="mt-3 w-full" disabled={!dirty || busy} onClick={saveNote}>
+      <Button variant="secondary" className="mt-4 w-full lg:min-h-11 lg:text-base" disabled={!dirty || busy} onClick={saveNote}>
         {busy ? "Salvando..." : "Salvar aviso"}
       </Button>
     </div>
@@ -322,15 +323,15 @@ function ProfessionalsSection({ professionals, onSaved }: { professionals: Profe
   const byId = new Map((accounts.data?.accounts ?? []).map((a) => [a.professionalId, a.login]));
 
   return (
-    <section className="mt-10">
-      <h2 className="font-brand text-2xl font-semibold">Profissionais e logins</h2>
-      <p className="mt-1 text-base">
+    <section className="mt-14 lg:mt-16">
+      <h2 className="font-brand text-2xl font-semibold lg:text-3xl">Profissionais e logins</h2>
+      <p className="mt-2 text-base">
         Seu usuário: <code>{accounts.data?.masterUsername ?? "…"}</code> (acesso completo). Cada profissional entra com o
         próprio usuário e vê só o trabalho dela.
       </p>
-      <ul className="mt-3 grid gap-3 lg:grid-cols-2 min-[1440px]:grid-cols-3">
+      <ul className="mt-5 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
         {professionals.map((p) => (
-          <li key={p.id} className="rounded-2xl bg-white/80 px-4 py-3">
+          <li key={p.id} className="space-y-2 rounded-2xl border border-blush-2 bg-white/80 px-5 py-4">
             <p>
               <span className="font-bold">{p.name}</span> · usuário <code>{p.id}</code>
             </p>
@@ -348,14 +349,14 @@ function ProfessionalsSection({ professionals, onSaved }: { professionals: Profe
           </li>
         ))}
       </ul>
-      <div className="mt-4 lg:max-w-xl">
+      <div className="mt-8 rounded-3xl bg-blush p-5 lg:max-w-xl">
         <Field id={id} label="Nova profissional" error={err ?? undefined}>
           <input id={id} value={name} onChange={(e) => setName(e.target.value)} className={inputClass} autoComplete="off" />
         </Field>
         <p className="mt-2 text-base">
           O usuário é gerado no cadastro (primeiro nome, sem acento, em minúsculas). Depois, crie a senha dela na lista acima.
         </p>
-        <Button variant="secondary" className="mt-3 w-full lg:w-auto" disabled={busy || name.trim().length < 2} onClick={add}>
+        <Button variant="secondary" className="mt-4 w-full lg:w-auto" disabled={busy || name.trim().length < 2} onClick={add}>
           Cadastrar profissional
         </Button>
       </div>
@@ -455,7 +456,7 @@ function ServicesTable({
   const rows = [...services].sort(
     (a, b) => (catOrder.get(a.categoryId) ?? 99) - (catOrder.get(b.categoryId) ?? 99) || a.sortOrder - b.sortOrder,
   );
-  const th = "px-4 py-3 font-bold";
+  const th = "px-5 py-4 font-bold";
 
   return (
     <div className="mt-5">
@@ -466,6 +467,9 @@ function ServicesTable({
             <caption className="sr-only">Serviços</caption>
             <thead className="bg-blush text-coffee">
               <tr>
+                <th scope="col" className={`${th} w-16`}>
+                  Foto
+                </th>
                 <th scope="col" className={th}>
                   Serviço
                 </th>
@@ -497,7 +501,12 @@ function ServicesTable({
                     onClick={() => setPanel({ id: s.id })}
                     className={`cursor-pointer border-t border-blush-2 ${selected ? "bg-blush" : "hover:bg-cream"} ${s.active ? "" : "text-cocoa"}`}
                   >
-                    <td className="px-4 py-2">
+                    <td className="px-5 py-4">
+                      <div className="h-10 w-10">
+                        {s.photoUrl && <ServiceThumb key={s.photoUrl} url={s.photoUrl} alt={`Foto de ${s.name}`} className="h-10 w-10 rounded-xl" />}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4">
                       <button
                         type="button"
                         aria-label={`Editar ${s.name}`}
@@ -507,23 +516,23 @@ function ServicesTable({
                         {s.name}
                       </button>
                     </td>
-                    <td className="px-4 py-2">
+                    <td className="px-5 py-4">
                       {categories.find((c) => c.id === s.categoryId)?.name}
-                      {s.subcategory && <span className="block text-cocoa">{s.subcategory}</span>}
+                      {s.subcategory && <span className="mt-1 block text-cocoa">{s.subcategory}</span>}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-2">
+                    <td className="whitespace-nowrap px-5 py-4">
                       {formatDurationShort(s.durationMin)}
                       {s.durationEstimated && (
-                        <span className="mt-0.5 block w-fit rounded-full bg-warn-bg px-2 text-sm font-bold text-warn">
+                        <span className="mt-1.5 block w-fit rounded-full bg-warn-bg px-2.5 py-0.5 text-sm font-bold text-warn">
                           duração estimada
                         </span>
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-2 text-right">{formatPrice(s.priceCents)}</td>
+                    <td className="whitespace-nowrap px-5 py-4 text-right">{formatPrice(s.priceCents)}</td>
                     {isMaster && (
-                      <td className="px-4 py-2">{professionals.find((p) => p.id === s.professionalId)?.name.split(" ")[0] ?? "—"}</td>
+                      <td className="px-5 py-4">{professionals.find((p) => p.id === s.professionalId)?.name.split(" ")[0] ?? "—"}</td>
                     )}
-                    <td className="px-4 py-2">
+                    <td className="px-5 py-4">
                       <span
                         className={`rounded-full px-3 py-0.5 text-sm font-bold ${s.active ? "bg-ok-bg text-ok" : "bg-blush-2 text-coffee"}`}
                       >

@@ -1,7 +1,6 @@
 "use client";
 
 import { useParams, useSearchParams } from "next/navigation";
-import { useState } from "react";
 import { api } from "@/lib/api-client";
 import { formatDateLong, formatDuration, formatPrice, STATUS_LABEL, whatsappLink } from "@/lib/domain/format";
 import type { AppointmentStatus as Status } from "@/lib/domain/types";
@@ -20,7 +19,7 @@ const STATUS_STYLE: Record<Status, string> = {
 };
 
 const STATUS_TEXT: Record<Status, string> = {
-  pending: "O salão vai conferir a agenda e confirmar pelo WhatsApp. Guarde este link para acompanhar.",
+  pending: "O salão vai conferir a agenda e confirmar pelo WhatsApp.",
   confirmed: "Seu horário está garantido. Esperamos você!",
   rejected: "Não foi possível atender neste horário. Faça um novo pedido ou fale com o salão.",
   cancelled: "Este agendamento foi cancelado. Se precisar, faça um novo pedido ou fale com o salão.",
@@ -30,12 +29,11 @@ export function AppointmentStatus() {
   const { id } = useParams<{ id: string }>();
   const isNew = useSearchParams().get("novo") === "1";
   const { data, error, reload, loading } = useApi(`appt:${id}`, () => api.appointment(id));
-  const [copied, setCopied] = useState(false);
 
   if (error?.code === "NOT_FOUND") {
     return (
       <div className="text-center">
-        <h1 className="font-brand text-2xl font-semibold">Agendamento não encontrado</h1>
+        <h1 className="font-brand text-2xl font-semibold lg:text-4xl">Agendamento não encontrado</h1>
         <p className="mt-3">Confira se o link está completo.</p>
         <LinkButton href="/" className="mt-6 w-full">
           Ir para o início
@@ -55,18 +53,6 @@ export function AppointmentStatus() {
   }
   if (!data) return <Spinner />;
 
-  async function share() {
-    const url = window.location.href.replace(/\?.*$/, "");
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: "Meu agendamento - Longo Bucco", url });
-        return;
-      }
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-    } catch {}
-  }
-
   return (
     <div>
       {isNew && (
@@ -74,7 +60,7 @@ export function AppointmentStatus() {
           Pedido enviado, {data.customerFirstName}!
         </p>
       )}
-      <h1 className="font-brand text-2xl font-semibold text-coffee">Seu agendamento</h1>
+      <h1 className="font-brand text-2xl font-semibold lg:text-4xl text-coffee">Seu agendamento</h1>
       <p className={`mt-4 inline-block rounded-full px-4 py-2 text-lg font-bold ${STATUS_STYLE[data.status]}`}>
         {STATUS_LABEL[data.status]}
       </p>
@@ -108,9 +94,6 @@ export function AppointmentStatus() {
       <div className="mt-6 flex flex-col gap-3">
         <Button variant="secondary" onClick={reload} disabled={loading}>
           Atualizar status
-        </Button>
-        <Button variant="secondary" onClick={share}>
-          {copied ? "Link copiado!" : "Copiar ou compartilhar o link"}
         </Button>
         <a
           href={whatsappLink(SALON.whatsappE164, `Olá! Fiz um pedido de agendamento pelo site: ${data.serviceName}, ${data.time}.`)}

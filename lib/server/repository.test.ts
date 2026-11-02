@@ -104,3 +104,42 @@ describe("agendamentos", () => {
     expect(r).toEqual({ ok: false, reason: "SERVICE_NOT_FOUND" });
   });
 });
+
+describe("foto do serviço", () => {
+  const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
+  const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 9]);
+
+  it("seed sem foto", async () => {
+    expect((await repo.listServices()).every((s) => s.photoUrl === null)).toBe(true);
+  });
+
+  it("envio grava, troca muda a URL e descarta a anterior", async () => {
+    const a = await repo.setServicePhoto("manicure", JPEG, "image/jpeg");
+    expect(a?.photoUrl).toMatch(/^\/api\/service-photos\/[0-9a-f-]{36}$/);
+    const idA = a!.photoUrl!.split("/").pop()!;
+    expect(await repo.getPhoto(idA)).toEqual({ bytes: JPEG, contentType: "image/jpeg" });
+    expect((await repo.getService("manicure"))?.photoUrl).toBe(a!.photoUrl);
+
+    const b = await repo.setServicePhoto("manicure", PNG, "image/png");
+    expect(b!.photoUrl).not.toBe(a!.photoUrl);
+    expect(await repo.getPhoto(idA)).toBeNull();
+    expect(store.photos.size).toBe(1);
+  });
+
+  it("remoção zera a URL e apaga a imagem; serviço inexistente retorna null", async () => {
+    const a = await repo.setServicePhoto("manicure", JPEG, "image/jpeg");
+    const removed = await repo.removeServicePhoto("manicure");
+    expect(removed?.photoUrl).toBeNull();
+    expect(store.photos.size).toBe(0);
+    expect(await repo.getPhoto(a!.photoUrl!.split("/").pop()!)).toBeNull();
+    expect(await repo.removeServicePhoto("manicure")).toMatchObject({ photoUrl: null });
+    expect(await repo.setServicePhoto("nao-existe", JPEG, "image/jpeg")).toBeNull();
+  });
+
+  it("reinício (resetStore) volta tudo para sem foto", async () => {
+    await repo.setServicePhoto("manicure", JPEG, "image/jpeg");
+    store = resetStore();
+    expect((await repo.getService("manicure"))?.photoUrl).toBeNull();
+    expect(store.photos.size).toBe(0);
+  });
+});

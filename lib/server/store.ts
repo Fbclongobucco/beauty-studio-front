@@ -1,12 +1,20 @@
+import type { PhotoType } from "@/lib/domain/photo";
 import type { Appointment, Category, Professional, Service } from "@/lib/domain/types";
 import { createEventBus, logSubscriber, type EventBus } from "./events";
 import { seedCategories, seedProfessionals, seedServices } from "./seed";
+
+export interface StoredPhoto {
+  bytes: Uint8Array<ArrayBuffer>;
+  contentType: PhotoType;
+}
 
 export interface Store {
   professionals: Professional[];
   categories: Category[];
   services: Service[];
   appointments: Appointment[];
+  /** Fotos dos serviços, por id da foto. Somem no reinício, como o resto. */
+  photos: Map<string, StoredPhoto>;
   events: EventBus;
   startedAt: string;
 }
@@ -19,6 +27,7 @@ function createStore(): Store {
     categories: structuredClone(seedCategories),
     services: structuredClone(seedServices),
     appointments: [],
+    photos: new Map(),
     events,
     startedAt: new Date().toISOString(),
   };

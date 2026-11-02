@@ -12,7 +12,7 @@ export function StepHeader({ step, total, title }: { step: number; total: number
           />
         ))}
       </div>
-      <h1 className="mt-4 font-brand text-2xl font-semibold leading-tight text-coffee">{title}</h1>
+      <h1 className="mt-4 font-brand text-2xl font-semibold leading-tight text-coffee lg:text-3xl">{title}</h1>
     </header>
   );
 }

@@ -33,7 +33,7 @@ export function PendingList() {
 
   return (
     <div>
-      <h1 className="font-brand text-2xl font-semibold">Pedidos aguardando confirmação</h1>
+      <h1 className="font-brand text-2xl font-semibold lg:text-4xl">Pedidos aguardando confirmação</h1>
       <p className="mb-5 mt-1 text-base">Ordenados pela data do atendimento. A lista se atualiza sozinha.</p>
       {dialog}
       {error && !list ? (
@@ -48,7 +48,7 @@ export function PendingList() {
       ) : list.length === 0 ? (
         <p className="rounded-3xl bg-blush p-6 text-center text-lg">Nenhum pedido aguardando confirmação.</p>
       ) : (
-        <ul className="grid gap-4 lg:grid-cols-2 min-[1440px]:grid-cols-3">
+        <ul className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
           {list.map((a) => (
             <li key={a.id}>
               <AppointmentCard a={a} isNew={newIds.has(a.id)} showProfessional={isMaster} onAction={ask} />

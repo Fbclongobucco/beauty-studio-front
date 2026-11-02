@@ -23,7 +23,7 @@ const PRESETS: { id: Preset; label: string }[] = [
 ];
 
 const pill = (on: boolean) =>
-  `min-h-12 rounded-full border-2 px-4 font-bold ${on ? "border-cocoa bg-cocoa text-white" : "border-blush-2 bg-white text-coffee"}`;
+  `min-h-12 rounded-full border-2 px-4 font-bold lg:min-h-10 lg:text-base ${on ? "border-cocoa bg-cocoa text-white" : "border-blush-2 bg-white text-coffee"}`;
 
 function monthRange(date: string): { from: string; to: string } {
   const from = `${date.slice(0, 8)}01`;
@@ -69,10 +69,10 @@ export function EarningsView() {
 
   return (
     <div>
-      <h1 className="font-brand text-2xl font-semibold">{isMaster ? "Ganhos do salão" : "Meus ganhos"}</h1>
+      <h1 className="font-brand text-2xl font-semibold lg:text-4xl">{isMaster ? "Ganhos do salão" : "Meus ganhos"}</h1>
       <p className="mt-1 text-base">
         Soma dos agendamentos <strong>confirmados</strong>, pelo preço do serviço na hora do pedido. Não inclui adicionais
-        (como francesinha e encapsular) nem descontos.
+        nem descontos.
       </p>
 
       <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Período">

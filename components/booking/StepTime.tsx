@@ -55,7 +55,7 @@ export function StepTime({ service, date, selected, notice, onSelect, onChangeDa
       ) : (
         <>
           <p className="mb-3 text-base">Horário de início. O atendimento dura {formatDuration(service.durationMin)}.</p>
-          <ul className="grid grid-cols-3 gap-3">
+          <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
             {data.slots.map((t) => {
               const sel = t === selected;
               return (

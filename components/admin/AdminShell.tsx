@@ -121,7 +121,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   return (
     // --admin-top: altura do cabeçalho fixo do computador; usada por elementos "sticky" da grade semanal.
-    <div className="min-h-dvh [--admin-top:0px] lg:[--admin-top:6.75rem]">
+    <div data-admin-shell className="min-h-dvh [--admin-top:0px] lg:[--admin-top:6.75rem]">
       {/* Computador: cabeçalho fixo em toda a largura, em duas faixas. */}
       <header className="sticky top-0 z-20 hidden border-b border-blush-2 bg-cream/95 backdrop-blur lg:block">
         <div className="mx-auto flex h-16 max-w-[90rem] items-center gap-6 border-b border-blush-2 px-8">
@@ -175,7 +175,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           )}
           <Link
             href="/admin"
-            className={`${quick} ${count.pending > 0 ? "bg-danger-bg text-danger hover:bg-danger-bg" : ""}`}
+            className={`${quick} ${count.pending > 0 ? "bg-pending text-white hover:bg-pending hover:brightness-95" : ""}`}
           >
             {count.pending === 0
               ? "Nenhum pedido aguardando"
@@ -200,17 +200,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
             <a href="/agendar" target="_blank" rel="noopener" className={quick}>
               Página de agendamento ↗
             </a>
-            <span className="rounded-full bg-warn-bg px-3 py-1 text-sm font-bold text-warn" title="Os dados somem ao reiniciar o servidor">
-              Modo de teste: dados em memória
-            </span>
           </div>
         </div>
       </header>
 
-      {/* Celular e tablet: faixa de teste e cabeçalho com navegação no topo (layout atual). */}
-      <p className="bg-warn-bg px-4 py-2 text-center text-base font-bold text-warn lg:hidden">
-        Modo de teste: dados em memória (somem ao reiniciar o servidor)
-      </p>
+      {/* Celular e tablet: cabeçalho com navegação no topo (layout atual). */}
       <header className="sticky top-0 z-10 border-b border-blush-2 bg-cream/95 backdrop-blur lg:hidden">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-2">
           <Link href="/admin" className="flex min-h-12 items-center gap-2">

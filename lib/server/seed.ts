@@ -15,7 +15,7 @@ export const seedProfessionals: Professional[] = [
 ];
 
 export const seedCategories: Category[] = [
-  { id: "unhas", name: "Unhas", note: "Francesinha: valor à parte. Encapsular: + R$ 15,00.", sortOrder: 1 },
+  { id: "unhas", name: "Unhas", note: null, sortOrder: 1 },
   { id: "trancas", name: "Tranças", note: "Valores somente de mão de obra.", sortOrder: 2 },
   { id: "depilacao", name: "Depilação", note: null, sortOrder: 3 },
 ];
@@ -67,5 +67,6 @@ export const seedServices: Service[] = rows.map(
     professionalId,
     active: true,
     sortOrder: i + 1,
+    photoUrl: null,
   }),
 );

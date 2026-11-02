@@ -26,6 +26,8 @@ export interface Service {
   professionalId: ID;
   active: boolean;
   sortOrder: number;
+  /** URL da foto do serviço (absoluta ou relativa à origem da API); null = sem foto. */
+  photoUrl: string | null;
 }
 
 export type AppointmentStatus = "pending" | "confirmed" | "rejected" | "cancelled";
@@ -105,6 +107,7 @@ export interface PublicService {
   durationMin: number;
   priceCents: number | null;
   professional: { id: ID; name: string };
+  photoUrl: string | null;
 }
 
 export interface PublicCategory {

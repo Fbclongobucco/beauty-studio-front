@@ -26,6 +26,7 @@ export async function GET() {
             durationMin: s.durationMin,
             priceCents: s.priceCents,
             professional: { id: s.professionalId, name: profName.get(s.professionalId) ?? "" },
+            photoUrl: s.photoUrl,
           })),
       }))
       .filter((c) => c.services.length > 0),

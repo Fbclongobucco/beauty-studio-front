@@ -47,7 +47,7 @@ export function StepCustomer({ value, onSubmit }: { value: CustomerData; onSubmi
     <>
       <StepHeader step={4} total={5} title="Seus dados" />
       <p className="mb-5">Usamos seu WhatsApp para confirmar o horário.</p>
-      <form onSubmit={submit} noValidate className="space-y-6">
+      <form onSubmit={submit} noValidate className="space-y-6 lg:max-w-lg">
         <div>
           <label htmlFor={ids.name} className="block font-bold">
             Seu nome

@@ -13,6 +13,7 @@ import { StepDay } from "./StepDay";
 import { StepTime } from "./StepTime";
 import { StepCustomer, type CustomerData } from "./StepCustomer";
 import { StepReview } from "./StepReview";
+import { BookingAside } from "./BookingAside";
 
 export const TOTAL_STEPS = 5;
 const DRAFT_KEY = "lb-booking-customer";
@@ -118,7 +119,8 @@ export function BookingWizard() {
   };
 
   return (
-    <div>
+    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-10">
+      <div className="min-w-0">
       <button
         type="button"
         onClick={back}
@@ -178,6 +180,14 @@ export function BookingWizard() {
           }}
         />
       )}
+      </div>
+      <BookingAside
+        service={step >= 2 ? chosen?.service : undefined}
+        date={step >= 3 ? p.data : undefined}
+        time={step >= 4 ? p.hora : undefined}
+        step={step}
+        onEdit={(n) => go({ passo: n })}
+      />
     </div>
   );
 }

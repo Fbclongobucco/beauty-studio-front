@@ -14,9 +14,9 @@ import { useAppointmentAction } from "./useAppointmentAction";
 import { WeekGrid } from "./WeekGrid";
 
 const navBtn =
-  "inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border-2 border-cocoa bg-white/70 text-2xl font-bold text-coffee hover:bg-blush";
+  "inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border-2 border-cocoa bg-white/70 text-2xl font-bold text-coffee hover:bg-blush lg:h-11 lg:w-11 lg:text-xl";
 const pill = (on: boolean) =>
-  `min-h-12 rounded-full border-2 px-4 font-bold ${on ? "border-cocoa bg-cocoa text-white" : "border-blush-2 bg-white text-coffee"}`;
+  `min-h-12 rounded-full border-2 px-4 font-bold lg:min-h-10 lg:text-base ${on ? "border-cocoa bg-cocoa text-white" : "border-blush-2 bg-white text-coffee"}`;
 
 export function AgendaView() {
   const router = useRouter();
@@ -75,9 +75,11 @@ export function AgendaView() {
 
   return (
     <div>
-      <h1 className="font-brand text-2xl font-semibold">Agenda</h1>
+      <h1 className="font-brand text-2xl font-semibold lg:text-4xl">Agenda</h1>
 
-      <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Visão da agenda">
+      {/* No computador, visão, navegação e filtro ficam numa barra só. */}
+      <div className="lg:mt-4 lg:flex lg:flex-wrap lg:items-center lg:gap-x-6 lg:gap-y-3 lg:rounded-3xl lg:border lg:border-blush-2 lg:bg-white/60 lg:px-4 lg:py-3">
+      <div className="mt-4 flex flex-wrap gap-2 lg:mt-0" role="group" aria-label="Visão da agenda">
         <button type="button" aria-pressed={view === "todos"} onClick={() => set({ visao: undefined })} className={pill(view === "todos")}>
           Todos
         </button>
@@ -90,12 +92,12 @@ export function AgendaView() {
       </div>
 
       {view === "todos" ? (
-        <p className="mt-3 text-base">
+        <p className="mt-3 text-base lg:mt-0">
           Todos os agendamentos{showPast ? "" : " de hoje em diante"}, agrupados por dia e em ordem de horário.
         </p>
       ) : week ? (
         <>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
+          <div className="mt-4 flex flex-wrap items-center gap-2 lg:mt-0">
             <button type="button" className={navBtn} onClick={() => set({ dia: addDays(ws, -7) })} aria-label="Semana anterior">
               ‹
             </button>
@@ -115,7 +117,7 @@ export function AgendaView() {
         </>
       ) : (
         <>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
+          <div className="mt-4 flex flex-wrap items-center gap-2 lg:mt-0">
             <button type="button" className={navBtn} onClick={() => set({ dia: addDays(date, -1) })} aria-label="Dia anterior">
               ‹
             </button>
@@ -127,13 +129,13 @@ export function AgendaView() {
               type="date"
               value={date}
               onChange={(e) => isDateString(e.target.value) && set({ dia: e.target.value })}
-              className="order-last min-h-14 min-w-[8rem] flex-1 rounded-2xl border-2 border-blush-2 bg-white px-3 text-lg sm:order-none lg:max-w-xs"
+              className="order-last min-h-14 min-w-[8rem] flex-1 rounded-2xl border-2 border-blush-2 bg-white px-3 text-lg sm:order-none lg:min-h-11 lg:max-w-[12rem] lg:text-base"
             />
             <button type="button" className={navBtn} onClick={() => set({ dia: addDays(date, 1) })} aria-label="Próximo dia">
               ›
             </button>
           </div>
-          <p className="mt-2 text-lg font-bold first-letter:uppercase">
+          <p className="mt-2 text-lg font-bold first-letter:uppercase lg:mt-0">
             {formatDateLong(date)}
             {date === today && " (hoje)"}
           </p>
@@ -146,7 +148,7 @@ export function AgendaView() {
       )}
 
       {isMaster && (
-        <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Filtrar por profissional">
+        <div className="mt-4 flex flex-wrap gap-2 lg:ml-auto lg:mt-0" role="group" aria-label="Filtrar por profissional">
           {[{ id: "", name: "Todas" }, ...(catalog.data?.professionals ?? [])].map((p) => (
             <button
               key={p.id}
@@ -160,6 +162,8 @@ export function AgendaView() {
           ))}
         </div>
       )}
+
+      </div>
 
       <div className="mt-5">{dialog}</div>
       {error && !list ? (

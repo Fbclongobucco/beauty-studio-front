@@ -10,9 +10,10 @@ import type {
 import { isSlotAvailable } from "@/lib/domain/availability";
 import { conflictOf, nextStatus, sameSlotOverlap } from "@/lib/domain/status";
 import { isoAt, toMinutes } from "@/lib/domain/schedule";
+import type { PhotoType } from "@/lib/domain/photo";
 import type { BookingValue, ServiceInput } from "@/lib/domain/validation";
 import type { DomainEventType } from "./events";
-import { getStore, type Store } from "./store";
+import { getStore, type Store, type StoredPhoto } from "./store";
 
 export interface AppointmentFilter {
   status?: AppointmentStatus;
@@ -45,6 +46,10 @@ export interface Repository {
   getService(id: string): Promise<Service | null>;
   createService(input: ServiceInput): Promise<Service>;
   updateService(id: string, patch: Partial<ServiceInput>): Promise<Service | null>;
+  /** Substitui a foto do serviço; a anterior é descartada. */
+  setServicePhoto(id: string, bytes: Uint8Array, contentType: PhotoType): Promise<Service | null>;
+  removeServicePhoto(id: string): Promise<Service | null>;
+  getPhoto(photoId: string): Promise<StoredPhoto | null>;
   confirmedBusy(professionalId: string): Promise<Pick<Appointment, "date" | "time" | "durationMin">[]>;
   listAppointments(filter?: AppointmentFilter): Promise<(Appointment & { conflict: ConflictKind | null })[]>;
   getAppointment(id: string): Promise<Appointment | null>;
@@ -80,6 +85,11 @@ function uniqueId(base: string, taken: { id: string }[]): string {
   while (taken.some((t) => t.id === id)) id = `${slugify(base)}-${n++}`;
   return id;
 }
+
+const PHOTO_PATH = "/api/service-photos/";
+
+/** Id da foto a partir da URL gerada pela API de teste. */
+const photoIdOf = (url: string | null) => (url?.startsWith(PHOTO_PATH) ? url.slice(PHOTO_PATH.length) : null);
 
 function byDateTime(a: Appointment, b: Appointment) {
   return a.date.localeCompare(b.date) || a.time.localeCompare(b.time) || a.createdAt.localeCompare(b.createdAt);
@@ -144,6 +154,7 @@ export function createMemoryRepository(store: () => Store = getStore): Repositor
         id: uniqueId(input.name, s.services),
         ...input,
         durationEstimated: false,
+        photoUrl: null,
         sortOrder: Math.max(0, ...s.services.map((x) => x.sortOrder)) + 1,
       };
       s.services.push(svc);
@@ -156,6 +167,30 @@ export function createMemoryRepository(store: () => Store = getStore): Repositor
       // Duração revisada pelo salão deixa de ser estimativa.
       if (patch.durationMin !== undefined) svc.durationEstimated = false;
       return structuredClone(svc);
+    },
+    async setServicePhoto(id, bytes, contentType) {
+      const s = store();
+      const svc = s.services.find((x) => x.id === id);
+      if (!svc) return null;
+      const old = photoIdOf(svc.photoUrl);
+      if (old) s.photos.delete(old);
+      // Id novo a cada envio: a URL muda e caches não mostram a foto antiga.
+      const photoId = crypto.randomUUID();
+      s.photos.set(photoId, { bytes: bytes.slice(), contentType });
+      svc.photoUrl = PHOTO_PATH + photoId;
+      return structuredClone(svc);
+    },
+    async removeServicePhoto(id) {
+      const s = store();
+      const svc = s.services.find((x) => x.id === id);
+      if (!svc) return null;
+      const old = photoIdOf(svc.photoUrl);
+      if (old) s.photos.delete(old);
+      svc.photoUrl = null;
+      return structuredClone(svc);
+    },
+    async getPhoto(photoId) {
+      return store().photos.get(photoId) ?? null;
     },
     async confirmedBusy(professionalId) {
       return busyOf(professionalId).map(({ date, time, durationMin }) => ({ date, time, durationMin }));

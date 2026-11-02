@@ -48,7 +48,7 @@ export function StepDay({
         <Spinner label="Buscando dias livres..." />
       ) : (
         <>
-          <ul className="grid grid-cols-2 gap-3">
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {visible.map((d) => {
               const sel = d.date === selected;
               return (

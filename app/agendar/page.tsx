@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Agendar horário" };
 
 export default function AgendarPage() {
   return (
-    <PageShell>
+    <PageShell wide>
       <Suspense fallback={<Spinner />}>
         <BookingWizard />
       </Suspense>

@@ -16,10 +16,16 @@ import * as me from "@/app/api/admin/me/route";
 import * as professionals from "@/app/api/admin/professionals/route";
 import * as services from "@/app/api/admin/services/route";
 import * as service from "@/app/api/admin/services/[id]/route";
+import * as servicePhoto from "@/app/api/admin/services/[id]/photo/route";
+import * as photoFile from "@/app/api/service-photos/[photoId]/route";
+import * as publicServices from "@/app/api/services/route";
 import { resetMemoryAccounts } from "./accounts";
 import { createSessionToken, SESSION_COOKIE } from "./auth";
 import { repo } from "./repository";
 import { resetStore } from "./store";
+
+// `connection()` exige escopo de requisição do Next; nos testes, as rotas públicas rodam fora dele.
+vi.mock("next/server", async (orig) => ({ ...(await orig<typeof import("next/server")>()), connection: async () => {} }));
 
 type Handler = (req: NextRequest, ctx: { params: Promise<Record<string, string>> }) => Promise<Response>;
 
@@ -39,6 +45,7 @@ const ROUTES: Record<string, { mod: Record<string, unknown>; params?: Record<str
   "professionals": { mod: professionals },
   "services": { mod: services },
   "services/[id]": { mod: service, params: { id: "manicure" } },
+  "services/[id]/photo": { mod: servicePhoto, params: { id: "manicure" } },
 };
 
 const FRI = "2026-11-06";
@@ -63,7 +70,7 @@ afterEach(() => {
 async function call(
   mod: Record<string, unknown>,
   method: string,
-  opts: { as?: string; query?: string; body?: unknown; params?: Record<string, string> } = {},
+  opts: { as?: string; query?: string; body?: unknown; form?: FormData; params?: Record<string, string> } = {},
 ) {
   const headers: Record<string, string> = {};
   if (opts.as) headers.cookie = `${SESSION_COOKIE}=${await createSessionToken(opts.as)}`;
@@ -71,7 +78,7 @@ async function call(
   const req = new NextRequest(`http://localhost/api/admin/x${opts.query ? `?${opts.query}` : ""}`, {
     method,
     headers,
-    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+    body: opts.form ?? (opts.body !== undefined ? JSON.stringify(opts.body) : undefined),
   });
   const res = await (mod[method] as Handler)(req, { params: Promise.resolve(opts.params ?? {}) });
   return { status: res.status, body: await res.json(), res };
@@ -99,7 +106,7 @@ describe("cobertura de escopo", () => {
 
     for (const [name, r] of Object.entries(ROUTES)) {
       if (r.public) continue;
-      for (const method of ["GET", "POST", "PATCH"]) {
+      for (const method of ["GET", "POST", "PATCH", "PUT", "DELETE"]) {
         if (typeof r.mod[method] !== "function") continue;
         const { status } = await call(r.mod, method, { params: r.params, body: method === "GET" ? undefined : {} });
         expect(status, `${method} ${name}`).toBe(401);
@@ -294,5 +301,88 @@ describe("contas", () => {
     expect(env.body.fields.professionalId).toContain("ADMIN_USERS");
     const none = await call(accounts, "POST", { as: "master", body: { professionalId: "maria", password: "123456" } });
     expect(none.status).toBe(400);
+  });
+});
+
+describe("foto do serviço", () => {
+  const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, ...new Array(800).fill(7)]);
+  const form = (bytes: Uint8Array<ArrayBuffer>, name = "foto.jpg", type = "image/jpeg") => {
+    const f = new FormData();
+    f.append("photo", new File([bytes], name, { type }));
+    return f;
+  };
+  const put = (as: string, id: string, f: FormData) => call(servicePhoto, "PUT", { as, params: { id }, form: f });
+  const getFile = async (url: string) => {
+    const photoId = url.split("/").pop()!;
+    return photoFile.GET(new NextRequest(`http://localhost${url}`), { params: Promise.resolve({ photoId }) });
+  };
+  const publicPhotoOf = async (id: string) => {
+    const body = await (await publicServices.GET()).json();
+    return body.categories.flatMap((c: { services: { id: string; photoUrl: string | null }[] }) => c.services)
+      .find((s: { id: string }) => s.id === id)?.photoUrl;
+  };
+
+  it("envio válido aparece no catálogo público e a imagem é servida com o tipo certo", async () => {
+    const r = await put("lorrayne", "box-braids", form(JPEG));
+    expect(r.status).toBe(200);
+    expect(r.body.photoUrl).toMatch(/^\/api\/service-photos\//);
+    expect(await publicPhotoOf("box-braids")).toBe(r.body.photoUrl);
+    expect(await publicPhotoOf("manicure")).toBeNull();
+
+    const file = await getFile(r.body.photoUrl);
+    expect(file.status).toBe(200);
+    expect(file.headers.get("content-type")).toBe("image/jpeg");
+    expect(file.headers.get("cache-control")).toContain("immutable");
+    expect(new Uint8Array(await file.arrayBuffer())).toEqual(JPEG);
+  });
+
+  it("troca muda a URL; remoção zera e a URL antiga responde 404", async () => {
+    const a = await put("master", "manicure", form(JPEG));
+    const b = await put("master", "manicure", form(JPEG));
+    expect(b.body.photoUrl).not.toBe(a.body.photoUrl);
+    expect((await getFile(a.body.photoUrl)).status).toBe(404);
+
+    const del = await call(servicePhoto, "DELETE", { as: "master", params: { id: "manicure" } });
+    expect(del.status).toBe(200);
+    expect(del.body.photoUrl).toBeNull();
+    expect((await getFile(b.body.photoUrl)).status).toBe(404);
+    // Sem foto também responde 200.
+    expect((await call(servicePhoto, "DELETE", { as: "master", params: { id: "manicure" } })).status).toBe(200);
+  });
+
+  it("recusa arquivo grande, PDF renomeado e campo ausente", async () => {
+    const big = new Uint8Array(6 * 1024 * 1024);
+    big.set([0xff, 0xd8, 0xff]);
+    const r1 = await put("stefani", "manicure", form(big));
+    expect(r1.status).toBe(400);
+    expect(r1.body).toMatchObject({ code: "VALIDATION_ERROR", fields: { photo: "A foto deve ter no máximo 5 MB." } });
+
+    const pdf = new TextEncoder().encode("%PDF-1.7 conteúdo");
+    const r2 = await put("stefani", "manicure", form(pdf, "foto.jpg", "image/jpeg"));
+    expect(r2.body.fields).toEqual({ photo: "Envie uma foto em JPEG, PNG ou WebP." });
+
+    const r3 = await put("stefani", "manicure", new FormData());
+    expect(r3.status).toBe(400);
+    expect(r3.body.fields).toEqual({ photo: "Escolha uma foto." });
+    expect((await repo.getService("manicure"))?.photoUrl).toBeNull();
+  });
+
+  it("serviço de outra profissional responde 404 e não muda a foto", async () => {
+    const r = await put("michele", "manicure", form(JPEG));
+    expect(r.status).toBe(404);
+    const d = await call(servicePhoto, "DELETE", { as: "michele", params: { id: "manicure" } });
+    expect(d.status).toBe(404);
+    expect((await repo.getService("manicure"))?.photoUrl).toBeNull();
+  });
+
+  it("sem sessão responde 401", async () => {
+    expect((await call(servicePhoto, "PUT", { params: { id: "manicure" }, form: form(JPEG) })).status).toBe(401);
+    expect((await call(servicePhoto, "DELETE", { params: { id: "manicure" } })).status).toBe(401);
+  });
+
+  it("PATCH do serviço ignora photoUrl no corpo", async () => {
+    const r = await call(service, "PATCH", { as: "master", params: { id: "manicure" }, body: { photoUrl: "https://x/y.jpg" } });
+    expect(r.status).toBe(200);
+    expect(r.body.photoUrl).toBeNull();
   });
 });

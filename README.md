@@ -71,6 +71,7 @@ Detalhes:
 - **As demais durações são ESTIMATIVA** (autorizada para teste). Elas aparecem com a marca "duração estimada" no painel e devem ser revisadas pelas profissionais em **Painel → Serviços** antes do uso real. A marca some quando a duração é editada.
 - Preços, durações, avisos das categorias, novos serviços, novas categorias e novas profissionais são editáveis no painel. Agendamentos já feitos mantêm o preço e a duração do momento do pedido.
 - Catálogo inicial: `lib/server/seed.ts`.
+- Cada serviço pode ter **uma foto**, opcional, cadastrada em **Painel → Serviços** (formulário "Editar tudo" no celular, ou painel lateral da tabela no computador). A foto só é gravada no "Salvar". O navegador reduz a imagem para no máximo 1600 px, em JPEG, antes de enviar. A cliente vê a miniatura na lista de serviços (toque para ampliar) e na escolha do serviço no agendamento.
 
 ## Ganhos
 
@@ -78,7 +79,7 @@ Em `/admin/ganhos`, cada profissional vê os próprios ganhos. O master vê o to
 
 - Base de cálculo: soma do preço gravado em cada agendamento **confirmado** com data no período.
   - Pendentes, recusados e cancelados ficam fora.
-  - Não inclui adicionais (francesinha, encapsular) nem descontos. Não é registro de pagamento.
+  - Não inclui adicionais nem descontos. Não é registro de pagamento.
 - **Realizado**: atendimentos já terminados (horário de término no fuso America/Sao_Paulo). **Previsto**: os que ainda não terminaram.
 - Serviço sem preço ("Consultar valor") fica fora da soma e aparece contado à parte.
 - Períodos:
@@ -94,13 +95,14 @@ Em `/admin/ganhos`, cada profissional vê os próprios ganhos. O master vê o to
 
 ## API de teste (dados em memória)
 
-Os dados ficam na memória do processo do servidor. **Tudo se perde ao reiniciar** (agendamentos e edições do painel), e não funciona com várias instâncias (serverless). Serve apenas para testes, até a chegada do backend definitivo. O painel mostra a faixa "Modo de teste".
+Os dados ficam na memória do processo do servidor. **Tudo se perde ao reiniciar** (agendamentos, edições do painel e fotos dos serviços), e não funciona com várias instâncias (serverless). Serve apenas para testes, até a chegada do backend definitivo.
 
 O front-end acessa os dados **somente por HTTP** (`lib/api-client.ts`). Para trocar pelo backend definitivo, basta implementar os mesmos contratos e apontar `NEXT_PUBLIC_API_BASE_URL`.
 
 ### Endpoints públicos
 
-- `GET /api/services`: categorias (com aviso) e serviços ativos.
+- `GET /api/services`: categorias (com aviso) e serviços ativos, cada um com `photoUrl` (ou `null`).
+- `GET /api/service-photos/{photoId}`: imagem guardada pela API de teste. O backend definitivo pode servir as fotos de outro endereço (storage/CDN); o front usa a `photoUrl` como vier.
 - `GET /api/availability?serviceId=&date=AAAA-MM-DD`: horários de início livres.
 - `GET /api/availability/days?serviceId=&from=AAAA-MM-DD&days=N`: dias abertos e se têm horário livre.
 - `POST /api/appointments`: cria o pedido `{ serviceId, date, time, customerName, customerPhone, notes? }`. Respostas: 201, 400 `VALIDATION_ERROR` ou 409 `SLOT_UNAVAILABLE`.
@@ -129,6 +131,12 @@ Sem sessão: 401. Operação exclusiva do master com sessão de profissional: 40
 - `PATCH /api/admin/services/{id}`.
   - Serviço alheio: 404.
   - Troca de profissional por quem não é master: 403.
+  - `photoUrl` no corpo é ignorado; a foto só muda pelos endpoints abaixo.
+- `PUT /api/admin/services/{id}/photo`: `multipart/form-data` com o arquivo no campo `photo`. Substitui a foto anterior e responde 200 com o serviço.
+  - Aceita JPEG, PNG e WebP, conferidos pelo conteúdo do arquivo (não pelo nome), até 5 MB.
+  - Erros: 400 `VALIDATION_ERROR` com `fields.photo` ("Envie uma foto em JPEG, PNG ou WebP.", "A foto deve ter no máximo 5 MB." ou "Escolha uma foto."); serviço alheio: 404.
+  - Cada envio gera uma `photoUrl` nova, para o cache não mostrar a foto antiga.
+- `DELETE /api/admin/services/{id}/photo`: remove a foto e responde 200 com `photoUrl: null` (também sem foto). Serviço alheio: 404.
 - `GET /api/admin/categories`: todos. `POST /api/admin/categories` e `PATCH /api/admin/categories/{id}`: só master.
 - `GET /api/admin/professionals`: master recebe todas; profissional recebe só a própria. `POST`: só master.
 - `GET /api/admin/accounts`: só master. `{ masterUsername, accounts: [{ professionalId, name, login: "env" | "memory" | null }] }`, sem senhas.

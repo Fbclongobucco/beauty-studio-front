@@ -9,7 +9,7 @@ import type { AdminAppointment } from "@/lib/domain/types";
 const ROW = "2.25rem";
 
 const BLOCK_STYLE = {
-  pending: "border-warn bg-warn-bg text-warn",
+  pending: "border-pending bg-pending-bg text-pending",
   confirmed: "border-ok bg-ok-bg text-ok",
   rejected: "border-danger bg-danger-bg text-danger opacity-70",
   cancelled: "border-danger bg-danger-bg text-danger opacity-70",

@@ -13,6 +13,9 @@
   --color-ok-bg: #e3f0e2;
   --color-warn: #7a4a00;
   --color-warn-bg: #fbecc8;
+  /* Pedido aguardando confirmação: laranja queimado, para chamar atenção (contraste 5,2:1 no branco). */
+  --color-pending: #c2410c;
+  --color-pending-bg: #ffe2c7;
   --color-danger: #8e1c1c;
   --color-danger-bg: #f8dcdc;
 
@@ -25,6 +28,13 @@
 html {
   font-size: 112.5%;
   -webkit-text-size-adjust: 100%;
+}
+
+/* Painel no computador: base de 16 px, com mais informação por tela. As páginas das clientes mantêm 18 px. */
+@media (min-width: 1024px) {
+  html:has([data-admin-shell]) {
+    font-size: 100%;
+  }
 }
 
 body {
